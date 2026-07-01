@@ -25,6 +25,8 @@ class DesktopShell extends ConsumerStatefulWidget {
 }
 
 class _DesktopShellState extends ConsumerState<DesktopShell> {
+  double _sidebarWidth = 400.0;
+
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(navIndexProvider);
@@ -32,7 +34,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     final isProfileActive = ref.watch(isProfileActiveInSettingsDesktopProvider);
     final theme = Theme.of(context);
 
-    // Column 1 Layout Selector (Sidebar Column - Fixed Width 300)
+    // Column 1 Layout Selector (Sidebar Column - Variable Width)
     final Widget leftDirectorySidebar = switch (selectedIndex) {
       0 => const DirectMessagesList(),
       1 => const WorkspaceChannelsTree(),
@@ -143,9 +145,9 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     return Scaffold(
       body: Row(
         children: [
-          // Column 1: Left Directory Drawer Panel (Fixed Width 300)
+          // Column 1: Left Directory Drawer Panel (Variable Width)
           SizedBox(
-            width: 300,
+            width: _sidebarWidth,
             child: Column(
               children: [
                 Expanded(child: leftDirectorySidebar),
@@ -154,10 +156,38 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
             ),
           ),
 
-          VerticalDivider(
-            width: 1,
-            thickness: 1,
-            color: theme.colorScheme.outlineVariant,
+          // Resize drag handle divider
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragUpdate: (details) {
+              setState(() {
+                _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(240.0, 480.0);
+              });
+            },
+            child: MouseRegion(
+              cursor: SystemMouseCursors.resizeColumn,
+              child: Container(
+                width: 10,
+                color: Colors.transparent,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 1,
+                      color: theme.colorScheme.outlineVariant,
+                    ),
+                    Container(
+                      width: 4,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurfaceVariant.withAlpha(100),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
 
           // Column 2: Central Context Communication Stage Canvas
