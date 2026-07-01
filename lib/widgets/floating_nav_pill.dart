@@ -6,8 +6,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/widgets/universal_action_button.dart';
 
 // Providers
+import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
-import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 class FloatingNavPill extends ConsumerWidget {
@@ -65,7 +65,7 @@ class FloatingNavPill extends ConsumerWidget {
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
                           ref.read(navIndexProvider.notifier).state = index;
-                          ref.read(activeChatIdProvider.notifier).state = null;
+                          ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
                           ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
                         },
                         child: Column(

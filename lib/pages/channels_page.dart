@@ -4,11 +4,10 @@ import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
+import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
-
-// Pages
-import 'package:chat/pages/chat_page.dart';
+import 'package:chat/providers/nav_provider.dart';
 
 // Enums & Dummy Data
 import 'package:chat/enums/layout_mode.dart';
@@ -20,7 +19,8 @@ class WorkspaceChannelsTree extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final activeChatId = ref.watch(activeChatIdProvider);
+    final chatSession = ref.watch(activeChatSessionProvider);
+    final activeChatId = chatSession.chatId;
     final layoutMode = ref.watch(layoutProvider);
 
     return Scaffold(
@@ -74,28 +74,22 @@ class WorkspaceChannelsTree extends ConsumerWidget {
                   itemCount: mockChannels.length,
                   itemBuilder: (context, index) {
                     final channel = mockChannels[index];
-                    final isSelected = activeChatId == channel.name;
+                    final isSelected = activeChatId == channel.name && chatSession.type == ChatSessionType.channel;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6.0),
                       child: InkWell(
                         onTap: () {
-                          // Set active chat ID
-                          ref.read(activeChatIdProvider.notifier).state = channel.name;
+                          // Update active navigation state index to Channels (index 1)
+                          ref.read(navIndexProvider.notifier).state = 1;
+                          
+                          // Populate active chat session
+                          ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
+                            chatId: channel.name,
+                            type: ChatSessionType.channel,
+                          );
+                          
                           ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
-
-                          if (layoutMode == LayoutMode.mobile) {
-                            // On Mobile, navigate to ChatPage
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ChatPage(
-                                  chatId: channel.name,
-                                  isChannel: true,
-                                ),
-                              ),
-                            );
-                          }
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(

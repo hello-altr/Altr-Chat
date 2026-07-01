@@ -4,6 +4,7 @@ import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
+import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
@@ -58,7 +59,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                     onTap: () {
                       if (isDesktop) {
                         ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = true;
-                        ref.read(activeChatIdProvider.notifier).state = null;
+                        ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
                       } else {
                         // On Mobile, switch tab index to Profile (index 2)
                         ref.read(navIndexProvider.notifier).state = 2;

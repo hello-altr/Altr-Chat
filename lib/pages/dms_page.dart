@@ -4,11 +4,10 @@ import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
+import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
-
-// Pages
-import 'package:chat/pages/chat_page.dart';
+import 'package:chat/providers/nav_provider.dart';
 
 // Enums & Dummy Data
 import 'package:chat/enums/layout_mode.dart';
@@ -33,7 +32,8 @@ class DirectMessagesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final activeChatId = ref.watch(activeChatIdProvider);
+    final chatSession = ref.watch(activeChatSessionProvider);
+    final activeChatId = chatSession.chatId;
     final layoutMode = ref.watch(layoutProvider);
 
     return Scaffold(
@@ -87,28 +87,22 @@ class DirectMessagesList extends ConsumerWidget {
                   itemCount: mockDms.length,
                   itemBuilder: (context, index) {
                     final dm = mockDms[index];
-                    final isSelected = activeChatId == dm.userName;
+                    final isSelected = activeChatId == dm.userName && chatSession.type == ChatSessionType.dm;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6.0),
                       child: InkWell(
                         onTap: () {
-                          // Set active chat ID
-                          ref.read(activeChatIdProvider.notifier).state = dm.userName;
+                          // Update active navigation state index to DMs (index 0)
+                          ref.read(navIndexProvider.notifier).state = 0;
+                          
+                          // Populate active chat session
+                          ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
+                            chatId: dm.userName,
+                            type: ChatSessionType.dm,
+                          );
+                          
                           ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
-
-                          if (layoutMode == LayoutMode.mobile) {
-                            // On Mobile, navigate to ChatPage
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ChatPage(
-                                  chatId: dm.userName,
-                                  isChannel: false,
-                                ),
-                              ),
-                            );
-                          }
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(

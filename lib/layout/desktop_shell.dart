@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 // Providers
 import 'package:chat/providers/chat_state_provider.dart';
-import 'package:chat/providers/layout_provider.dart';
+import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
@@ -13,8 +13,8 @@ import 'package:chat/widgets/floating_nav_pill.dart';
 
 // Pages
 import 'package:chat/pages/profile_and_settings_page.dart';
+import 'package:chat/pages/shared_chat_canvas.dart';
 import 'package:chat/pages/channels_page.dart';
-import 'package:chat/pages/chat_page.dart';
 import 'package:chat/pages/dms_page.dart';
 
 class DesktopShell extends ConsumerStatefulWidget {
@@ -44,7 +44,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(navIndexProvider);
-    final activeChatId = ref.watch(activeChatIdProvider);
+    final chatSession = ref.watch(activeChatSessionProvider);
     final isProfileActive = ref.watch(isProfileActiveInSettingsDesktopProvider);
     final theme = Theme.of(context);
 
@@ -61,11 +61,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
 
     // Column 2 Layout Selector (Main Content View)
     final Widget centralViewCanvas = switch (selectedIndex) {
-      0 => activeChatId != null
-          ? ChatPage(
-              chatId: activeChatId,
-              isChannel: false,
-              key: ValueKey('dm-$activeChatId'),
+      0 => chatSession.type == ChatSessionType.dm && chatSession.chatId != null
+          ? SharedChatCanvas(
+              chatId: chatSession.chatId,
+              isReadOnly: false,
+              key: ValueKey('dm-${chatSession.chatId}'),
             )
           : Center(
               child: Column(
@@ -94,11 +94,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 ],
               ),
             ),
-      1 => activeChatId != null
-          ? ChatPage(
-              chatId: activeChatId,
-              isChannel: true,
-              key: ValueKey('channel-$activeChatId'),
+      1 => chatSession.type == ChatSessionType.channel && chatSession.chatId != null
+          ? SharedChatCanvas(
+              chatId: chatSession.chatId,
+              isReadOnly: false,
+              key: ValueKey('channel-${chatSession.chatId}'),
             )
           : Center(
               child: Column(
@@ -172,7 +172,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                     controller: _sidebarPageController,
                     onPageChanged: (index) {
                       ref.read(navIndexProvider.notifier).state = index;
-                      ref.read(activeChatIdProvider.notifier).state = null;
+                      // Clear chat session trace
+                      ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
                       ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
                     },
                     children: const [
