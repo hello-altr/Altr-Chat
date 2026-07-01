@@ -8,56 +8,9 @@ import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
-// Enums
+// Enums & Dummy Data
 import 'package:chat/enums/layout_mode.dart';
-
-// Profile Page Mock Notifications
-class ActivityNotification {
-  final String chatName;
-  final String preview;
-  final String time;
-  final String category; // 'all', 'mentions', 'registrations'
-
-  const ActivityNotification({
-    required this.chatName,
-    required this.preview,
-    required this.time,
-    required this.category,
-  });
-}
-
-const List<ActivityNotification> mockNotifications = [
-  ActivityNotification(
-    chatName: 'Asher',
-    preview: 'Hey, can you help me check this code?',
-    time: '11:15 AM',
-    category: 'all',
-  ),
-  ActivityNotification(
-    chatName: '#project-altr',
-    preview: '@aero_user please review layout specs.',
-    time: 'Yesterday',
-    category: 'mentions',
-  ),
-  ActivityNotification(
-    chatName: 'Registration System',
-    preview: 'New agent registered successfully.',
-    time: '9:00 AM',
-    category: 'registrations',
-  ),
-  ActivityNotification(
-    chatName: '#general',
-    preview: 'Welcome to HelloAltr Chat! Let us get started.',
-    time: '10:30 AM',
-    category: 'all',
-  ),
-  ActivityNotification(
-    chatName: 'Registration System',
-    preview: 'Workspace nodes updated.',
-    time: 'Monday',
-    category: 'registrations',
-  ),
-];
+import 'package:chat/dummy_data.dart';
 
 // Component 1: SettingsIndexHub (Column 1 on Desktop / Segment on Mobile)
 class SettingsIndexHub extends ConsumerStatefulWidget {

@@ -7,73 +7,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 
-// Enums
-import 'package:chat/enums/layout_mode.dart';
-
 // Pages
 import 'package:chat/pages/chat_page.dart';
 
-class ChannelModel {
-  final String name;
-  final bool isPrivate;
-  final String lastMessage;
-  final String time;
-  final int unreadCount;
-  final int warningCount;
-
-  const ChannelModel({
-    required this.name,
-    required this.isPrivate,
-    required this.lastMessage,
-    required this.time,
-    required this.unreadCount,
-    required this.warningCount,
-  });
-}
-
-// Premium mock data source for Workspace Channels
-const List<ChannelModel> mockChannels = [
-  ChannelModel(
-    name: 'general',
-    isPrivate: false,
-    lastMessage: 'Welcome to HelloAltr Chat! Let us get started.',
-    time: '10:30 AM',
-    unreadCount: 2,
-    warningCount: 0,
-  ),
-  ChannelModel(
-    name: 'project-altr',
-    isPrivate: true,
-    lastMessage: 'We should review the new layout specs carefully.',
-    time: 'Yesterday',
-    unreadCount: 0,
-    warningCount: 1,
-  ),
-  ChannelModel(
-    name: 'design-assets',
-    isPrivate: false,
-    lastMessage: 'References are uploaded to /docs directory.',
-    time: 'Monday',
-    unreadCount: 5,
-    warningCount: 0,
-  ),
-  ChannelModel(
-    name: 'announcements',
-    isPrivate: false,
-    lastMessage: 'Version 1.0 architecture launch today!',
-    time: 'Jul 1',
-    unreadCount: 0,
-    warningCount: 0,
-  ),
-  ChannelModel(
-    name: 'random',
-    isPrivate: false,
-    lastMessage: 'Check out this cool new glassmorphism visualizer!',
-    time: '2 days ago',
-    unreadCount: 0,
-    warningCount: 0,
-  ),
-];
+// Enums & Dummy Data
+import 'package:chat/enums/layout_mode.dart';
+import 'package:chat/dummy_data.dart';
 
 class WorkspaceChannelsTree extends ConsumerWidget {
   const WorkspaceChannelsTree({super.key});

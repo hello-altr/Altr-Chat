@@ -7,59 +7,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 
-// Enums
-import 'package:chat/enums/layout_mode.dart';
-
 // Pages
 import 'package:chat/pages/chat_page.dart';
 
-class DmModel {
-  final String userName;
-  final String lastMessage;
-  final String time;
-  final int unreadCount;
-
-  const DmModel({
-    required this.userName,
-    required this.lastMessage,
-    required this.time,
-    required this.unreadCount,
-  });
-}
-
-// Premium mock data source for Direct Messages
-const List<DmModel> mockDms = [
-  DmModel(
-    userName: 'Asher',
-    lastMessage: 'Hey, can you help me check this code?',
-    time: '11:15 AM',
-    unreadCount: 1,
-  ),
-  DmModel(
-    userName: 'Sophia',
-    lastMessage: 'The designs look amazing! Let us go ahead.',
-    time: '9:45 AM',
-    unreadCount: 0,
-  ),
-  DmModel(
-    userName: 'Benjamin',
-    lastMessage: 'I will join the call in 5 mins.',
-    time: 'Yesterday',
-    unreadCount: 0,
-  ),
-  DmModel(
-    userName: 'Olivia',
-    lastMessage: 'Let us catch up later.',
-    time: 'Monday',
-    unreadCount: 3,
-  ),
-  DmModel(
-    userName: 'Emma',
-    lastMessage: 'Thanks for the review!',
-    time: 'Jun 28',
-    unreadCount: 0,
-  ),
-];
+// Enums & Dummy Data
+import 'package:chat/enums/layout_mode.dart';
+import 'package:chat/dummy_data.dart';
 
 // Helper to generate a premium background hue from a string
 Color getInitialsBgColor(String name) {
