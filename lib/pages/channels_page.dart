@@ -204,17 +204,20 @@ class WorkspaceChannelsTree extends ConsumerWidget {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          '#${channel.name}',
-                                          style: theme.textTheme.titleMedium?.copyWith(
-                                            fontWeight: isSelected && layoutMode == LayoutMode.desktop
-                                                ? FontWeight.bold
-                                                : FontWeight.w600,
-                                            color: theme.colorScheme.onSurface,
+                                        Expanded(
+                                          child: Text(
+                                            '#${channel.name}',
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontWeight: isSelected && layoutMode == LayoutMode.desktop
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w600,
+                                              color: theme.colorScheme.onSurface,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
+                                        const SizedBox(width: 8),
                                         Text(
                                           channel.time,
                                           style: theme.textTheme.labelSmall?.copyWith(

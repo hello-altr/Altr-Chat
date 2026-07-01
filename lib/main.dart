@@ -18,7 +18,7 @@ class AltrChat extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const LayoutShell(),
-      
+
       // Strict enforcement of your PRD Material 3 requirement
       theme: ThemeData(
         useMaterial3: true,

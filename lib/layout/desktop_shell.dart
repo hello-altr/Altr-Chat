@@ -26,6 +26,20 @@ class DesktopShell extends ConsumerStatefulWidget {
 
 class _DesktopShellState extends ConsumerState<DesktopShell> {
   double _sidebarWidth = 400.0;
+  late PageController _sidebarPageController;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialIndex = ref.read(navIndexProvider);
+    _sidebarPageController = PageController(initialPage: initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _sidebarPageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,13 +48,16 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     final isProfileActive = ref.watch(isProfileActiveInSettingsDesktopProvider);
     final theme = Theme.of(context);
 
-    // Column 1 Layout Selector (Sidebar Column - Variable Width)
-    final Widget leftDirectorySidebar = switch (selectedIndex) {
-      0 => const DirectMessagesList(),
-      1 => const WorkspaceChannelsTree(),
-      2 => const SettingsIndexHub(),
-      _ => const SizedBox.shrink(),
-    };
+    // Listen to tab selection changes to animate the horizontal PageView directory
+    ref.listen<int>(navIndexProvider, (previous, next) {
+      if (_sidebarPageController.hasClients && next != _sidebarPageController.page?.round()) {
+        _sidebarPageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.fastOutSlowIn,
+        );
+      }
+    });
 
     // Column 2 Layout Selector (Main Content View)
     final Widget centralViewCanvas = switch (selectedIndex) {
@@ -145,12 +162,26 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     return Scaffold(
       body: Row(
         children: [
-          // Column 1: Left Directory Drawer Panel (Variable Width)
+          // Column 1: Left Directory Drawer Panel (Variable Width, Swipeable)
           SizedBox(
             width: _sidebarWidth,
             child: Column(
               children: [
-                Expanded(child: leftDirectorySidebar),
+                Expanded(
+                  child: PageView(
+                    controller: _sidebarPageController,
+                    onPageChanged: (index) {
+                      ref.read(navIndexProvider.notifier).state = index;
+                      ref.read(activeChatIdProvider.notifier).state = null;
+                      ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
+                    },
+                    children: const [
+                      DirectMessagesList(),
+                      WorkspaceChannelsTree(),
+                      SettingsIndexHub(),
+                    ],
+                  ),
+                ),
                 const FloatingNavPill(isDesktop: true),
               ],
             ),
