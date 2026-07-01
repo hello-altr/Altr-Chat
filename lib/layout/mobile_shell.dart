@@ -5,42 +5,63 @@ import 'package:material_ui/material_ui.dart';
 // Widgets
 import 'package:chat/widgets/floating_nav_pill.dart';
 
-class MobileShell extends ConsumerWidget {
+class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watch index changes from the navigation pill provider hook
-    final navIndex = ref.watch(mobileNavIndexProvider);
+  ConsumerState<MobileShell> createState() => _MobileShellState();
+}
 
-    // Map content view stages dynamically without destructive route replacements
-    final Widget currentStageView;
-    switch (navIndex) {
-      case 0:
-        currentStageView = const Center(
-          child: Text("Chats Directory Feed Pane"),
+class _MobileShellState extends ConsumerState<MobileShell> {
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Read the initial state (Index 1) to boot natively straight into Channels
+    final initialIndex = ref.read(mobileNavIndexProvider);
+    _pageController = PageController(initialPage: initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Listen for tab taps inside the FloatingNavPill to animate the PageView smoothly
+    ref.listen<int>(mobileNavIndexProvider, (previous, next) {
+      if (next != _pageController.page?.round()) {
+        _pageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.fastOutSlowIn,
         );
-        break;
-      case 1:
-        currentStageView = const Center(
-          child: Text("Aero Hub Functional Arena"),
-        );
-        break;
-      case 2:
-        currentStageView = const Center(
-          child: Text("Aero Learn LMS Module Space"),
-        );
-        break;
-      default:
-        currentStageView = const Placeholder();
-    }
+      }
+    });
 
     return Scaffold(
-      // Extends content underneath the floating pill boundaries to activate translucent lookovers
       extendBody: true,
       body: Stack(
         children: [
-          Positioned.fill(child: currentStageView),
+          // Infinite canvas stage mapping to your verified [DMs, Channels, Updates, Profile] matrix
+          PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              // Write swipe transitions back up into your global Riverpod provider state
+              ref.read(mobileNavIndexProvider.notifier).state = index;
+            },
+            children: const [
+              Center(child: Text("DMs Stage View")), // Index 0
+              Center(child: Text("Channels Stage View")), // Index 1 (Home Base)
+              Center(child: Text("Updates Stage View")), // Index 2
+              Center(child: Text("Profile Stage View")), // Index 3
+            ],
+          ),
+
+          // Floating overlay layers remain persistently fixed over the viewport
           const Positioned(
             left: 0,
             right: 0,

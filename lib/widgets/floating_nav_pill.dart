@@ -1,9 +1,10 @@
 // Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
-final mobileNavIndexProvider = StateProvider<int>((ref) => 0);
+final mobileNavIndexProvider = StateProvider<int>((ref) => 1);
 
 class FloatingNavPill extends ConsumerWidget {
   const FloatingNavPill({super.key});
@@ -17,19 +18,24 @@ class FloatingNavPill extends ConsumerWidget {
 
     final List<Map<String, dynamic>> navItems = [
       {
-        'icon': Icons.chat_bubble_outline,
-        'activeIcon': Icons.chat_bubble,
-        'label': 'Chats',
+        'icon': HugeIconsStroke.chat01,
+        'activeIcon': HugeIconsSolid.chat01,
+        'label': 'DMS',
       },
       {
-        'icon': Icons.hub_outlined,
-        'activeIcon': Icons.hub,
-        'label': 'Aero Hub',
+        'icon': HugeIconsStroke.hashtag,
+        'activeIcon': HugeIconsSolid.hashtag,
+        'label': 'Channels',
       },
       {
-        'icon': Icons.school_outlined,
-        'activeIcon': Icons.school,
-        'label': 'Aero Learn',
+        'icon': HugeIconsStroke.megaphone01,
+        'activeIcon': HugeIconsSolid.megaphone01,
+        'label': 'Updates',
+      },
+      {
+        'icon': HugeIconsStroke.userCircle02,
+        'activeIcon': HugeIconsSolid.userCircle02,
+        'label': 'Profile',
       },
     ];
 
@@ -130,7 +136,8 @@ class FloatingNavPill extends ConsumerWidget {
             // --- PILL 2: Pinned Standalone Action Overlay Capsule ---
             IconButton(
               key: actionButtonKey,
-              onPressed: () => _showQuickActionMenu(context, actionButtonKey, theme),
+              onPressed: () =>
+                  _showQuickActionMenu(context, actionButtonKey, theme),
               style: IconButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
