@@ -20,13 +20,13 @@ class AeroNavItem {
   });
 }
 
-// Global immutable list data configuration - Single Source of Truth
-final aeroNavItemsProvider = Provider<List<AeroNavItem>>((ref) {
+// Mobile navigation items
+final mobileNavItemsProvider = Provider<List<AeroNavItem>>((ref) {
   return const [
     AeroNavItem(
       icon: HugeIconsStroke.chat01,
       activeIcon: HugeIconsSolid.chat01,
-      label: 'DMS',
+      label: 'DMs',
     ),
     AeroNavItem(
       icon: HugeIconsStroke.hashtag,
@@ -34,14 +34,35 @@ final aeroNavItemsProvider = Provider<List<AeroNavItem>>((ref) {
       label: 'Channels',
     ),
     AeroNavItem(
-      icon: HugeIconsStroke.megaphone01,
-      activeIcon: HugeIconsSolid.megaphone01,
-      label: 'Updates',
-    ),
-    AeroNavItem(
       icon: HugeIconsStroke.userCircle02,
       activeIcon: HugeIconsSolid.userCircle02,
       label: 'Profile',
+    ),
+    AeroNavItem(
+      icon: HugeIconsStroke.settings01,
+      activeIcon: HugeIconsSolid.settings01,
+      label: 'Settings',
+    ),
+  ];
+});
+
+// Desktop navigation items
+final desktopNavItemsProvider = Provider<List<AeroNavItem>>((ref) {
+  return const [
+    AeroNavItem(
+      icon: HugeIconsStroke.chat01,
+      activeIcon: HugeIconsSolid.chat01,
+      label: 'DMs',
+    ),
+    AeroNavItem(
+      icon: HugeIconsStroke.hashtag,
+      activeIcon: HugeIconsSolid.hashtag,
+      label: 'Channels',
+    ),
+    AeroNavItem(
+      icon: HugeIconsStroke.settings01,
+      activeIcon: HugeIconsSolid.settings01,
+      label: 'Settings',
     ),
   ];
 });

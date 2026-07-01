@@ -8,6 +8,11 @@ import 'package:chat/widgets/floating_nav_pill.dart';
 // Providers
 import 'package:chat/providers/nav_provider.dart';
 
+// Pages
+import 'package:chat/pages/profile_and_settings_page.dart';
+import 'package:chat/pages/channels_page.dart';
+import 'package:chat/pages/dms_page.dart';
+
 class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key});
 
@@ -35,7 +40,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   Widget build(BuildContext context) {
     // Listen for tab taps inside the FloatingNavPill to animate the PageView smoothly
     ref.listen<int>(navIndexProvider, (previous, next) {
-      if (next != _pageController.page?.round()) {
+      if (_pageController.hasClients && next != _pageController.page?.round()) {
         _pageController.animateToPage(
           next,
           duration: const Duration(milliseconds: 300),
@@ -48,18 +53,18 @@ class _MobileShellState extends ConsumerState<MobileShell> {
       extendBody: true,
       body: Stack(
         children: [
-          // Infinite canvas stage mapping to your verified [DMs, Channels, Updates, Profile] matrix
+          // Infinite canvas stage mapping to verified [DMs, Channels, Profile, Settings] matrix
           PageView(
             controller: _pageController,
             onPageChanged: (index) {
-              // Write swipe transitions back up into your global Riverpod provider state
+              // Write swipe transitions back up into global Riverpod provider state
               ref.read(navIndexProvider.notifier).state = index;
             },
             children: const [
-              Center(child: Text("DMs Stage View")), // Index 0
-              Center(child: Text("Channels Stage View")), // Index 1 (Home Base)
-              Center(child: Text("Updates Stage View")), // Index 2
-              Center(child: Text("Profile Stage View")), // Index 3
+              DmsStageView(),          // Index 0
+              ChannelsStageView(),     // Index 1 (Home default landing base)
+              ProfileStageView(),      // Index 2
+              SettingsIndexHub(),      // Index 3
             ],
           ),
 
@@ -68,7 +73,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: FloatingNavPill(),
+            child: FloatingNavPill(isDesktop: false),
           ),
         ],
       ),

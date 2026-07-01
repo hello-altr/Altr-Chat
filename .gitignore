@@ -49,3 +49,10 @@ app.*.map.json
 
 # VS Code
 .vscode/
+
+# Graphify
+graphify-out/
+.agents/
+
+# User
+docs/
