@@ -5,6 +5,9 @@ import 'package:material_ui/material_ui.dart';
 // Widgets
 import 'package:chat/widgets/floating_nav_pill.dart';
 
+// Providers
+import 'package:chat/providers/nav_provider.dart';
+
 class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key});
 
@@ -18,8 +21,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   @override
   void initState() {
     super.initState();
-    // Read the initial state (Index 1) to boot natively straight into Channels
-    final initialIndex = ref.read(mobileNavIndexProvider);
+    final initialIndex = ref.read(navIndexProvider);
     _pageController = PageController(initialPage: initialIndex);
   }
 
@@ -32,7 +34,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   @override
   Widget build(BuildContext context) {
     // Listen for tab taps inside the FloatingNavPill to animate the PageView smoothly
-    ref.listen<int>(mobileNavIndexProvider, (previous, next) {
+    ref.listen<int>(navIndexProvider, (previous, next) {
       if (next != _pageController.page?.round()) {
         _pageController.animateToPage(
           next,
@@ -51,7 +53,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
             controller: _pageController,
             onPageChanged: (index) {
               // Write swipe transitions back up into your global Riverpod provider state
-              ref.read(mobileNavIndexProvider.notifier).state = index;
+              ref.read(navIndexProvider.notifier).state = index;
             },
             children: const [
               Center(child: Text("DMs Stage View")), // Index 0
