@@ -5,3 +5,7 @@ final messageDraftProvider = StateProvider.family<String, String>((ref, chatId) 
 
 // StateProvider to track whether the ProfileCardInspector is active in the desktop Settings panel
 final isProfileActiveInSettingsDesktopProvider = StateProvider<bool>((ref) => false);
+
+// Search Query Providers
+final channelSearchQueryProvider = StateProvider<String>((ref) => '');
+final dmSearchQueryProvider = StateProvider<String>((ref) => '');

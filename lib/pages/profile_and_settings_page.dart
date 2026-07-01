@@ -13,6 +13,9 @@ import 'package:chat/providers/nav_provider.dart';
 import 'package:chat/enums/layout_mode.dart';
 import 'package:chat/dummy_data.dart';
 
+// Widgets
+import 'package:chat/widgets/empty_state.dart';
+
 // Component 1: SettingsIndexHub (Column 1 on Desktop / Segment on Mobile)
 class SettingsIndexHub extends ConsumerStatefulWidget {
   const SettingsIndexHub({super.key});
@@ -306,6 +309,7 @@ class _ProfileCardInspectorState extends State<ProfileCardInspector> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final filteredNotifs = _getFilteredNotifications();
 
     // Apply layout-specific centering alignment from ideation
     return Scaffold(
@@ -438,6 +442,7 @@ class _ProfileCardInspectorState extends State<ProfileCardInspector> {
                 
                 // Grouped Notification Container (iOS settings style)
                 Container(
+                  width: double.infinity,
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(16),
@@ -445,18 +450,34 @@ class _ProfileCardInspectorState extends State<ProfileCardInspector> {
                       color: theme.colorScheme.outlineVariant.withAlpha(80),
                     ),
                   ),
-                  child: Column(
-                    children: _getFilteredNotifications().map((notif) {
-                      final isLast = _getFilteredNotifications().last == notif;
-                      return Column(
-                        children: [
-                          _buildNotificationCard(notif),
-                          if (!isLast)
-                            Divider(height: 1, indent: 16, color: theme.colorScheme.outlineVariant.withAlpha(80)),
-                        ],
-                      );
-                    }).toList(),
-                  ),
+                  child: filteredNotifs.isEmpty
+                      ? EmptyStateWidget(
+                          icon: HugeIconsStroke.notification01,
+                          title: "No notifications",
+                          subtitle: selectedFilter != 'all'
+                              ? "No activities found in the '$selectedFilter' category."
+                              : "You are all caught up! No notifications yet.",
+                          onActionPressed: selectedFilter != 'all'
+                              ? () {
+                                  setState(() {
+                                    selectedFilter = 'all';
+                                  });
+                                }
+                              : null,
+                          actionLabel: selectedFilter != 'all' ? "Show all" : null,
+                        )
+                      : Column(
+                          children: filteredNotifs.map((notif) {
+                            final isLast = filteredNotifs.last == notif;
+                            return Column(
+                              children: [
+                                _buildNotificationCard(notif),
+                                if (!isLast)
+                                  Divider(height: 1, indent: 16, color: theme.colorScheme.outlineVariant.withAlpha(80)),
+                              ],
+                            );
+                          }).toList(),
+                        ),
                 ),
               ],
             ),

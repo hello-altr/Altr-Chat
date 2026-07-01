@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
+// Actions
+import 'package:chat/actions/chat_actions.dart';
+
 class UniversalActionButton extends ConsumerWidget {
   final GlobalKey buttonKey;
   final bool isDesktop;
@@ -64,13 +67,13 @@ class UniversalActionButton extends ConsumerWidget {
         ),
       ],
     ).then((value) {
-      if (value == null) return;
+      if (value == null || !context.mounted) return;
       switch (value) {
         case 'new_dm':
-          // Trigger global direct message workflow pipeline
+          ChatActions.triggerNewDm(context);
           break;
         case 'create_channel':
-          // Trigger workspace channel generation wizard
+          ChatActions.triggerCreateChannel(context);
           break;
       }
     });

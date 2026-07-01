@@ -13,15 +13,45 @@ import 'package:chat/providers/nav_provider.dart';
 import 'package:chat/enums/layout_mode.dart';
 import 'package:chat/dummy_data.dart';
 
-class WorkspaceChannelsTree extends ConsumerWidget {
+// Widgets
+import 'package:chat/widgets/empty_state.dart';
+
+// Actions
+import 'package:chat/actions/chat_actions.dart';
+
+class WorkspaceChannelsTree extends ConsumerStatefulWidget {
   const WorkspaceChannelsTree({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorkspaceChannelsTree> createState() => _WorkspaceChannelsTreeState();
+}
+
+class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
+  late TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController(text: ref.read(channelSearchQueryProvider));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chatSession = ref.watch(activeChatSessionProvider);
     final activeChatId = chatSession.chatId;
     final layoutMode = ref.watch(layoutProvider);
+    final searchQuery = ref.watch(channelSearchQueryProvider);
+
+    final filteredChannels = mockChannels.where((channel) {
+      return channel.name.toLowerCase().contains(searchQuery.toLowerCase());
+    }).toList();
 
     return Scaffold(
       body: SafeArea(
@@ -51,6 +81,10 @@ class WorkspaceChannelsTree extends ConsumerWidget {
                   ),
                 ),
                 child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    ref.read(channelSearchQueryProvider.notifier).state = value;
+                  },
                   decoration: InputDecoration(
                     hintText: 'Search channels...',
                     hintStyle: theme.textTheme.bodyMedium?.copyWith(
@@ -61,6 +95,15 @@ class WorkspaceChannelsTree extends ConsumerWidget {
                       color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
                       size: 20,
                     ),
+                    suffixIcon: searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              ref.read(channelSearchQueryProvider.notifier).state = '';
+                            },
+                          )
+                        : null,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -69,154 +112,176 @@ class WorkspaceChannelsTree extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 90), // Spacing for floating pill
-                  itemCount: mockChannels.length,
-                  itemBuilder: (context, index) {
-                    final channel = mockChannels[index];
-                    final isSelected = activeChatId == channel.name && chatSession.type == ChatSessionType.channel;
+                child: filteredChannels.isEmpty
+                    ? EmptyStateWidget(
+                        icon: HugeIconsStroke.hashtag,
+                        title: "No channels found",
+                        subtitle: searchQuery.isNotEmpty
+                            ? 'We couldn\'t find any channel matching "$searchQuery".'
+                            : "There are no channels available in this workspace.",
+                        onActionPressed: searchQuery.isNotEmpty
+                            ? () {
+                                _searchController.clear();
+                                ref.read(channelSearchQueryProvider.notifier).state = '';
+                              }
+                            : () => ChatActions.triggerCreateChannel(context),
+                        actionLabel: searchQuery.isNotEmpty ? "Clear search" : "Create a Channel",
+                        actionIcon: searchQuery.isNotEmpty ? Icons.refresh : Icons.add,
+                        onSecondaryActionPressed: searchQuery.isNotEmpty
+                            ? () => ChatActions.triggerCreateChannel(context)
+                            : null,
+                        secondaryActionLabel: searchQuery.isNotEmpty ? "Create a Channel" : null,
+                        secondaryActionIcon: searchQuery.isNotEmpty ? Icons.add : null,
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 90), // Spacing for floating pill
+                        itemCount: filteredChannels.length,
+                        itemBuilder: (context, index) {
+                          final channel = filteredChannels[index];
+                          final isSelected = activeChatId == channel.name && chatSession.type == ChatSessionType.channel;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6.0),
-                      child: InkWell(
-                        onTap: () {
-                          // Update active navigation state index to Channels (index 1)
-                          ref.read(navIndexProvider.notifier).state = 1;
-                          
-                          // Populate active chat session
-                          ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
-                            chatId: channel.name,
-                            type: ChatSessionType.channel,
-                          );
-                          
-                          ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: isSelected && layoutMode == LayoutMode.desktop
-                                ? theme.colorScheme.primaryContainer.withAlpha(150)
-                                : Colors.transparent,
-                            border: Border.all(
-                              color: isSelected && layoutMode == LayoutMode.desktop
-                                  ? theme.colorScheme.primary.withAlpha(80)
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              // Channel Icon
-                              Container(
-                                width: 40,
-                                height: 40,
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6.0),
+                            child: InkWell(
+                              onTap: () {
+                                // Update active navigation state index to Channels (index 1)
+                                ref.read(navIndexProvider.notifier).state = 1;
+                                
+                                // Populate active chat session
+                                ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
+                                  chatId: channel.name,
+                                  type: ChatSessionType.channel,
+                                );
+                                
+                                ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
+                                  borderRadius: BorderRadius.circular(12),
                                   color: isSelected && layoutMode == LayoutMode.desktop
-                                      ? theme.colorScheme.primary.withAlpha(40)
-                                      : theme.colorScheme.surfaceContainerHigh,
+                                      ? theme.colorScheme.primaryContainer.withAlpha(150)
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                    color: isSelected && layoutMode == LayoutMode.desktop
+                                        ? theme.colorScheme.primary.withAlpha(80)
+                                        : Colors.transparent,
+                                  ),
                                 ),
-                                child: Icon(
-                                  channel.isPrivate
-                                      ? HugeIconsStroke.lock
-                                      : HugeIconsStroke.hashtag,
-                                  color: isSelected && layoutMode == LayoutMode.desktop
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.onSurfaceVariant,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Channel Title and Last Message
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            '#${channel.name}',
-                                            style: theme.textTheme.titleMedium?.copyWith(
-                                              fontWeight: isSelected && layoutMode == LayoutMode.desktop
-                                                  ? FontWeight.bold
-                                                  : FontWeight.w600,
-                                              color: theme.colorScheme.onSurface,
+                                    // Channel Icon
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: isSelected && layoutMode == LayoutMode.desktop
+                                            ? theme.colorScheme.primary.withAlpha(40)
+                                            : theme.colorScheme.surfaceContainerHigh,
+                                      ),
+                                      child: Icon(
+                                        channel.isPrivate
+                                            ? HugeIconsStroke.lock
+                                            : HugeIconsStroke.hashtag,
+                                        color: isSelected && layoutMode == LayoutMode.desktop
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.onSurfaceVariant,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Channel Title and Last Message
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  '#${channel.name}',
+                                                  style: theme.textTheme.titleMedium?.copyWith(
+                                                    fontWeight: isSelected && layoutMode == LayoutMode.desktop
+                                                        ? FontWeight.bold
+                                                        : FontWeight.w600,
+                                                    color: theme.colorScheme.onSurface,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                channel.time,
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            channel.lastMessage,
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          channel.time,
-                                          style: theme.textTheme.labelSmall?.copyWith(
-                                            color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      channel.lastMessage,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
+                                        ],
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ],
-                                ),
-                              ),
-                              // Badges (Unread & Warnings)
-                              if (channel.unreadCount > 0 || channel.warningCount > 0) ...[
-                                const SizedBox(width: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    if (channel.unreadCount > 0)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary,
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Text(
-                                          '${channel.unreadCount}',
-                                          style: theme.textTheme.labelSmall?.copyWith(
-                                            color: theme.colorScheme.onPrimary,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    if (channel.warningCount > 0) ...[
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.error,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(
-                                          HugeIconsStroke.alert02,
-                                          color: theme.colorScheme.onError,
-                                          size: 10,
-                                        ),
+                                    // Badges Column
+                                    if (channel.unreadCount > 0 || channel.warningCount > 0) ...[
+                                      const SizedBox(width: 12),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          if (channel.unreadCount > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.primary,
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                '${channel.unreadCount}',
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  color: theme.colorScheme.onPrimary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          if (channel.warningCount > 0) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.error,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(
+                                                HugeIconsStroke.alert02,
+                                                color: theme.colorScheme.onError,
+                                                size: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ],
                                   ],
                                 ),
-                              ],
-                            ],
-                          ),
-                        ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
