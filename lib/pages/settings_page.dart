@@ -1,5 +1,7 @@
 // Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -33,6 +35,12 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
     final theme = Theme.of(context);
     final isDesktop = ref.watch(layoutProvider) == LayoutMode.desktop;
     final activeSettingsPanel = ref.watch(activeSettingsPanelProvider);
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final displayName = currentUser?.displayName ?? 'Aero User';
+    final emailId = currentUser?.email ?? 'user@helloaltr.com';
+    final photoUrl = currentUser?.photoURL;
+    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
 
     return Scaffold(
       body: SafeArea(
@@ -85,17 +93,21 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                             height: 50,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: LinearGradient(
+                              gradient: photoUrl == null ? LinearGradient(
                                 colors: [
                                   theme.colorScheme.primary,
                                   theme.colorScheme.secondary,
                                 ],
-                              ),
+                              ) : null,
+                              image: photoUrl != null ? DecorationImage(
+                                image: NetworkImage(photoUrl),
+                                fit: BoxFit.cover,
+                              ) : null,
                             ),
                             alignment: Alignment.center,
-                            child: const Text(
-                              'A',
-                              style: TextStyle(
+                            child: photoUrl != null ? null : Text(
+                              initials,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20,
@@ -108,14 +120,14 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Aero User',
+                                  displayName,
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'user@helloaltr.com',
+                                  emailId,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -195,6 +207,20 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                             if (isDesktop) {
                               ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
                             }
+                          },
+                        ),
+                        Divider(height: 1, indent: 48, color: theme.colorScheme.outlineVariant.withAlpha(80)),
+                        _buildSettingRow(
+                          icon: HugeIconsStroke.logout01,
+                          title: 'Sign Out',
+                          trailing: Icon(
+                            HugeIconsStroke.arrowRight01,
+                            color: theme.colorScheme.error,
+                            size: 18,
+                          ),
+                          onTap: () async {
+                            await FirebaseAuth.instance.signOut();
+                            await GoogleSignIn().signOut();
                           },
                         ),
                       ],
@@ -344,6 +370,13 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
     final filteredNotifs = _getFilteredNotifications();
     final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final displayName = currentUser?.displayName ?? 'Aero User';
+    final emailId = currentUser?.email ?? 'user@helloaltr.com';
+    final photoUrl = currentUser?.photoURL;
+    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
+    final usernameHandle = currentUser?.email != null ? '@${currentUser!.email!.split("@")[0]}' : '@aero_user';
+
     // Apply layout-specific centering alignment from ideation
     return Scaffold(
       appBar: isMobile
@@ -383,12 +416,16 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                         height: 90,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: LinearGradient(
+                          gradient: photoUrl == null ? LinearGradient(
                             colors: [
                               theme.colorScheme.primary,
                               theme.colorScheme.secondary,
                             ],
-                          ),
+                          ) : null,
+                          image: photoUrl != null ? DecorationImage(
+                            image: NetworkImage(photoUrl),
+                            fit: BoxFit.cover,
+                          ) : null,
                           boxShadow: [
                             BoxShadow(
                               color: theme.colorScheme.primary.withAlpha(40),
@@ -398,9 +435,9 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                           ],
                         ),
                         alignment: Alignment.center,
-                        child: const Text(
-                          'A',
-                          style: TextStyle(
+                        child: photoUrl != null ? null : Text(
+                          initials,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 36,
                             fontWeight: FontWeight.bold,
@@ -409,14 +446,14 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Aero User',
+                        displayName,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '@aero_user',
+                        usernameHandle,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -473,7 +510,7 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                       _buildDetailRow(
                         icon: HugeIconsStroke.mail01,
                         label: 'Email ID',
-                        value: 'user@helloaltr.com',
+                        value: emailId,
                       ),
                       Divider(height: 24, color: theme.colorScheme.outlineVariant.withAlpha(80)),
                       _buildDetailRow(

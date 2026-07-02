@@ -12,6 +12,8 @@ import 'package:chat/providers/layout_provider.dart';
 // Enums
 import 'package:chat/enums/layout_mode.dart';
 
+import 'package:chat/values.dart';
+
 class LayoutShell extends ConsumerWidget {
   const LayoutShell({super.key});
 
@@ -19,7 +21,7 @@ class LayoutShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final LayoutMode mode = constraints.maxWidth < 1040
+        final LayoutMode mode = constraints.maxWidth < kDesktopBreakpoint
             ? LayoutMode.mobile
             : LayoutMode.desktop;
 

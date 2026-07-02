@@ -8,6 +8,11 @@ import 'package:chat/layout_shell.dart';
 
 // Providers
 import 'package:chat/providers/theme_provider.dart';
+import 'package:chat/providers/auth_provider.dart';
+
+// Pages
+import 'package:chat/pages/welcome_page.dart';
+import 'package:chat/pages/splash_page.dart';
 
 // Theme & Utils
 import 'package:chat/theme/theme.dart';
@@ -22,6 +27,10 @@ void main() async {
   runApp(const ProviderScope(child: AltrChat()));
 }
 
+final splashDelayProvider = FutureProvider<void>((ref) async {
+  await Future.delayed(const Duration(seconds: 2));
+});
+
 class AltrChat extends ConsumerWidget {
   const AltrChat({super.key});
 
@@ -30,10 +39,28 @@ class AltrChat extends ConsumerWidget {
     TextTheme textTheme = createTextTheme(context, "Inter", "Montserrat");
     MaterialTheme theme = MaterialTheme(textTheme);
     final currentThemeMode = ref.watch(themeModeProvider);
+    final authState = ref.watch(authStateProvider);
+    final splashDelay = ref.watch(splashDelayProvider);
+
+    final Widget homeScreen;
+    if (splashDelay.isLoading) {
+      homeScreen = const SplashPage();
+    } else {
+      homeScreen = authState.when(
+        data: (user) {
+          if (user != null) {
+            return const LayoutShell();
+          }
+          return const WelcomePage();
+        },
+        loading: () => const SplashPage(),
+        error: (err, stack) => const WelcomePage(),
+      );
+    }
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const LayoutShell(),
+      home: homeScreen,
       theme: theme.light(),
       darkTheme: theme.dark(),
       themeMode: currentThemeMode,
