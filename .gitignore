@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# FVM Version Cache
+.fvm/
+
+# VS Code
+.vscode/
+
+# Graphify
+graphify-out/
+.agents/
+
+# User
+docs/
