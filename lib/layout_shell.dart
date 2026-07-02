@@ -19,7 +19,7 @@ class LayoutShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final LayoutMode mode = constraints.maxWidth < 840
+        final LayoutMode mode = constraints.maxWidth < 1040
             ? LayoutMode.mobile
             : LayoutMode.desktop;
 
