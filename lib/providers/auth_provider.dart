@@ -5,6 +5,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:flutter/foundation.dart';
+
 // Provides continuous reactive exposure of the active Firebase Auth state
 final authStateProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
@@ -13,7 +15,9 @@ final authStateProvider = StreamProvider<User?>((ref) {
 Future<void> signInWithGoogle(BuildContext context) async {
   try {
     final GoogleSignIn googleSignIn = GoogleSignIn(
-      clientId: '1085731614579-7o5itj8fbh0h7prujtt4suvqsl6latg4.apps.googleusercontent.com',
+      clientId: kIsWeb
+          ? '1085731614579-8da3in5pd6rbtefa256c6jgrgc7djdhd.apps.googleusercontent.com'
+          : null,
     );
     final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
     if (googleUser == null) {
