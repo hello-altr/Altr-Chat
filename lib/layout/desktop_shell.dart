@@ -61,40 +61,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
 
     // Column 2 Layout Selector (Main Content View)
     final Widget centralViewCanvas = switch (selectedIndex) {
-      0 => chatSession.type == ChatSessionType.dm && chatSession.chatId != null
-          ? SharedChatCanvas(
-              chatId: chatSession.chatId,
-              isReadOnly: false,
-              key: ValueKey('dm-${chatSession.chatId}'),
-            )
-          : Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    HugeIconsStroke.chat01,
-                    size: 64,
-                    color: theme.colorScheme.onSurfaceVariant.withAlpha(50),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Active DMs Chat Space Preview",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Select a conversation to start chatting.",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-      1 => chatSession.type == ChatSessionType.channel && chatSession.chatId != null
+      0 => chatSession.type == ChatSessionType.channel && chatSession.chatId != null
           ? SharedChatCanvas(
               chatId: chatSession.chatId,
               isReadOnly: false,
@@ -120,6 +87,39 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                   const SizedBox(height: 8),
                   Text(
                     "Select a channel to view the workspace.",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+      1 => chatSession.type == ChatSessionType.dm && chatSession.chatId != null
+          ? SharedChatCanvas(
+              chatId: chatSession.chatId,
+              isReadOnly: false,
+              key: ValueKey('dm-${chatSession.chatId}'),
+            )
+          : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    HugeIconsStroke.chat01,
+                    size: 64,
+                    color: theme.colorScheme.onSurfaceVariant.withAlpha(50),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Active DMs Chat Space Preview",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Select a conversation to start chatting.",
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
                     ),
@@ -177,8 +177,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                       ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
                     },
                     children: const [
-                      DirectMessagesList(),
                       WorkspaceChannelsTree(),
+                      DirectMessagesList(),
                       SettingsIndexHub(),
                     ],
                   ),

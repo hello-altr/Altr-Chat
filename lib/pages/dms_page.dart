@@ -157,8 +157,8 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
                             padding: const EdgeInsets.only(bottom: 6.0),
                             child: InkWell(
                               onTap: () {
-                                // Update active navigation state index to DMs (index 0)
-                                ref.read(navIndexProvider.notifier).state = 0;
+                                // Update active navigation state index to DMs (index 1)
+                                ref.read(navIndexProvider.notifier).state = 1;
                                 
                                 // Populate active chat session
                                 ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(

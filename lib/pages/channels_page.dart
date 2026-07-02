@@ -144,8 +144,8 @@ class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
                             padding: const EdgeInsets.only(bottom: 6.0),
                             child: InkWell(
                               onTap: () {
-                                // Update active navigation state index to Channels (index 1)
-                                ref.read(navIndexProvider.notifier).state = 1;
+                                // Update active navigation state index to Channels (index 0)
+                                ref.read(navIndexProvider.notifier).state = 0;
                                 
                                 // Populate active chat session
                                 ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(

@@ -33,27 +33,27 @@ class LayoutShell extends ConsumerWidget {
             // Sync navigation tab state transition metrics
             if (mode == LayoutMode.desktop) {
               // Transition: Mobile -> Desktop
-              // Mobile tabs: 0(DMs), 1(Channels), 2(Profile), 3(Settings)
-              // Desktop tabs: 0(DMs), 1(Channels), 2(Settings)
+              // Mobile tabs: 0(Channels), 1(DMs), 2(Settings), 3(Profile)
+              // Desktop tabs: 0(Channels), 1(DMs), 2(Settings)
               if (currentIndex == 2) {
-                // If on Profile in mobile, load settings on desktop and set ProfileCardInspector as active Column 2
-                ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = true;
-                ref.read(navIndexProvider.notifier).state = 2;
-              } else if (currentIndex == 3) {
                 // If on Settings in mobile, load settings on desktop with settings dashboard active in Column 2
                 ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
+                ref.read(navIndexProvider.notifier).state = 2;
+              } else if (currentIndex == 3) {
+                // If on Profile in mobile, load settings on desktop and set ProfileCardInspector as active Column 2
+                ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = true;
                 ref.read(navIndexProvider.notifier).state = 2;
               }
             } else {
               // Transition: Desktop -> Mobile
-              // Desktop tabs: 0(DMs), 1(Channels), 2(Settings)
-              // Mobile tabs: 0(DMs), 1(Channels), 2(Profile), 3(Settings)
+              // Desktop tabs: 0(Channels), 1(DMs), 2(Settings)
+              // Mobile tabs: 0(Channels), 1(DMs), 2(Settings), 3(Profile)
               if (currentIndex == 2) {
                 final isProfileActive = ref.read(isProfileActiveInSettingsDesktopProvider);
                 if (isProfileActive) {
-                  ref.read(navIndexProvider.notifier).state = 2; // Profile
+                  ref.read(navIndexProvider.notifier).state = 3; // Profile
                 } else {
-                  ref.read(navIndexProvider.notifier).state = 3; // Settings
+                  ref.read(navIndexProvider.notifier).state = 2; // Settings
                 }
               }
             }

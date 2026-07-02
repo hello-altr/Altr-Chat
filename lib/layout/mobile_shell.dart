@@ -1,3 +1,4 @@
+// Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -64,10 +65,10 @@ class _MobileShellState extends ConsumerState<MobileShell> {
               ref.read(navIndexProvider.notifier).state = index;
             },
             children: const [
-              DmsStageView(),          // Index 0
-              ChannelsStageView(),     // Index 1 (Home default landing base)
-              ProfileStageView(),      // Index 2
-              SettingsIndexHub(),      // Index 3
+              ChannelsStageView(),     // Index 0 (Home default landing base)
+              DmsStageView(),          // Index 1
+              SettingsIndexHub(),      // Index 2
+              ProfileStageView(),      // Index 3
             ],
           ),
 

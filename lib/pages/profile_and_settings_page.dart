@@ -64,8 +64,8 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                         ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = true;
                         ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
                       } else {
-                        // On Mobile, switch tab index to Profile (index 2)
-                        ref.read(navIndexProvider.notifier).state = 2;
+                        // On Mobile, switch tab index to Profile (index 3)
+                        ref.read(navIndexProvider.notifier).state = 3;
                       }
                     },
                     child: Container(
@@ -314,13 +314,14 @@ class _ProfileCardInspectorState extends State<ProfileCardInspector> {
     // Apply layout-specific centering alignment from ideation
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 600), // Keeps Telegram Desktop profile width constraint
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: ListView(
-              padding: const EdgeInsets.only(top: 24.0, bottom: 90),
-              children: [
+        child: SingleChildScrollView(
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600),
+              padding: const EdgeInsets.only(top: 24.0, bottom: 90, left: 16.0, right: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 // Centered Profile Avatar card
                 Center(
                   child: Column(
@@ -480,6 +481,7 @@ class _ProfileCardInspectorState extends State<ProfileCardInspector> {
                         ),
                 ),
               ],
+              ),
             ),
           ),
         ),
