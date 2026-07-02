@@ -391,24 +391,31 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                 ),
                 const SizedBox(height: 24),
 
-                // Quick Actions Row
+                // Quick Actions Row with even widths and even spacing
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildActionButton(
-                      icon: HugeIconsStroke.image02,
-                      label: 'Change Photo',
-                      onTap: () {},
+                    Expanded(
+                      child: _buildActionButton(
+                        icon: HugeIconsStroke.image02,
+                        label: 'Change Photo',
+                        onTap: () {},
+                      ),
                     ),
-                    _buildActionButton(
-                      icon: HugeIconsStroke.edit01,
-                      label: 'Edit Info',
-                      onTap: () {},
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        icon: HugeIconsStroke.edit01,
+                        label: 'Edit Info',
+                        onTap: () {},
+                      ),
                     ),
-                    _buildActionButton(
-                      icon: HugeIconsStroke.share01,
-                      label: 'Share Profile',
-                      onTap: () {},
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        icon: HugeIconsStroke.share01,
+                        label: 'Share Profile',
+                        onTap: () {},
+                      ),
                     ),
                   ],
                 ),
@@ -651,12 +658,15 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: theme.colorScheme.primary, size: 20),
             const SizedBox(height: 6),
@@ -666,6 +676,9 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                 fontWeight: FontWeight.bold,
                 fontSize: 10,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

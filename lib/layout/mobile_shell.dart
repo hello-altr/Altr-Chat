@@ -11,8 +11,8 @@ import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Pages
-import 'package:chat/pages/profile_and_settings_page.dart';
 import 'package:chat/pages/shared_chat_canvas.dart';
+import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/channels_page.dart';
 import 'package:chat/pages/dms_page.dart';
 
