@@ -9,15 +9,15 @@ import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
-// Enums & Dummy Data
-import 'package:chat/enums/layout_mode.dart';
-import 'package:chat/dummy_data.dart';
-
 // Widgets
 import 'package:chat/widgets/empty_state.dart';
 
 // Actions
 import 'package:chat/actions/chat_actions.dart';
+
+// Enums & Dummy Data
+import 'package:chat/enums/layout_mode.dart';
+import 'package:chat/dummy_data.dart';
 
 class WorkspaceChannelsTree extends ConsumerStatefulWidget {
   const WorkspaceChannelsTree({super.key});
@@ -144,8 +144,8 @@ class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
                             padding: const EdgeInsets.only(bottom: 6.0),
                             child: InkWell(
                               onTap: () {
-                                // Update active navigation state index to Channels (index 0)
-                                ref.read(navIndexProvider.notifier).state = 0;
+                                // Update active navigation state index to Channels (index 1)
+                                ref.read(navIndexProvider.notifier).state = 1;
                                 
                                 // Populate active chat session
                                 ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
@@ -153,7 +153,7 @@ class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
                                   type: ChatSessionType.channel,
                                 );
                                 
-                                ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
+                                ref.read(isProfileExpandedProvider.notifier).state = false;
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: AnimatedContainer(

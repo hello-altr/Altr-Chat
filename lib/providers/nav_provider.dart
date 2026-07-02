@@ -5,7 +5,7 @@ import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Your existing state index container tracker
-final navIndexProvider = StateProvider<int>((ref) => 0);
+final navIndexProvider = StateProvider<int>((ref) => 1);
 
 // Standardized schema model container for navigation components
 class AeroNavItem {
@@ -24,24 +24,19 @@ class AeroNavItem {
 final mobileNavItemsProvider = Provider<List<AeroNavItem>>((ref) {
   return const [
     AeroNavItem(
-      icon: HugeIconsStroke.hashtag,
-      activeIcon: HugeIconsSolid.hashtag,
-      label: 'Channels',
-    ),
-    AeroNavItem(
       icon: HugeIconsStroke.chat01,
       activeIcon: HugeIconsSolid.chat01,
       label: 'DMs',
     ),
     AeroNavItem(
+      icon: HugeIconsStroke.hashtag,
+      activeIcon: HugeIconsSolid.hashtag,
+      label: 'Channels',
+    ),
+    AeroNavItem(
       icon: HugeIconsStroke.settings01,
       activeIcon: HugeIconsSolid.settings01,
       label: 'Settings',
-    ),
-    AeroNavItem(
-      icon: HugeIconsStroke.userCircle02,
-      activeIcon: HugeIconsSolid.userCircle02,
-      label: 'Profile',
     ),
   ];
 });
@@ -50,14 +45,14 @@ final mobileNavItemsProvider = Provider<List<AeroNavItem>>((ref) {
 final desktopNavItemsProvider = Provider<List<AeroNavItem>>((ref) {
   return const [
     AeroNavItem(
-      icon: HugeIconsStroke.hashtag,
-      activeIcon: HugeIconsSolid.hashtag,
-      label: 'Channels',
-    ),
-    AeroNavItem(
       icon: HugeIconsStroke.chat01,
       activeIcon: HugeIconsSolid.chat01,
       label: 'DMs',
+    ),
+    AeroNavItem(
+      icon: HugeIconsStroke.hashtag,
+      activeIcon: HugeIconsSolid.hashtag,
+      label: 'Channels',
     ),
     AeroNavItem(
       icon: HugeIconsStroke.settings01,

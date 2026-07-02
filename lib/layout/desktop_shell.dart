@@ -4,8 +4,8 @@ import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
-import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/chat_session_provider.dart';
+import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
@@ -45,7 +45,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(navIndexProvider);
     final chatSession = ref.watch(activeChatSessionProvider);
-    final isProfileActive = ref.watch(isProfileActiveInSettingsDesktopProvider);
+    final isProfileExpanded = ref.watch(isProfileExpandedProvider);
     final theme = Theme.of(context);
 
     // Listen to tab selection changes to animate the horizontal PageView directory
@@ -61,40 +61,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
 
     // Column 2 Layout Selector (Main Content View)
     final Widget centralViewCanvas = switch (selectedIndex) {
-      0 => chatSession.type == ChatSessionType.channel && chatSession.chatId != null
-          ? SharedChatCanvas(
-              chatId: chatSession.chatId,
-              isReadOnly: false,
-              key: ValueKey('channel-${chatSession.chatId}'),
-            )
-          : Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    HugeIconsStroke.hashtag,
-                    size: 64,
-                    color: theme.colorScheme.onSurfaceVariant.withAlpha(50),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Active Channels Chat Space Preview",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Select a channel to view the workspace.",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-      1 => chatSession.type == ChatSessionType.dm && chatSession.chatId != null
+      0 => chatSession.type == ChatSessionType.dm && chatSession.chatId != null
           ? SharedChatCanvas(
               chatId: chatSession.chatId,
               isReadOnly: false,
@@ -127,7 +94,40 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 ],
               ),
             ),
-      2 => isProfileActive
+      1 => chatSession.type == ChatSessionType.channel && chatSession.chatId != null
+          ? SharedChatCanvas(
+              chatId: chatSession.chatId,
+              isReadOnly: false,
+              key: ValueKey('channel-${chatSession.chatId}'),
+            )
+          : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    HugeIconsStroke.hashtag,
+                    size: 64,
+                    color: theme.colorScheme.onSurfaceVariant.withAlpha(50),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Active Channels Chat Space Preview",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Select a channel to view the workspace.",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+      2 => isProfileExpanded
           ? const ProfileCardInspector()
           : Center(
               child: Column(
@@ -174,11 +174,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                       ref.read(navIndexProvider.notifier).state = index;
                       // Clear chat session trace
                       ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
-                      ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
+                      ref.read(isProfileExpandedProvider.notifier).state = false;
                     },
                     children: const [
-                      WorkspaceChannelsTree(),
                       DirectMessagesList(),
+                      WorkspaceChannelsTree(),
                       SettingsIndexHub(),
                     ],
                   ),

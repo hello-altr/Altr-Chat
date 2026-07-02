@@ -9,15 +9,15 @@ import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
-// Enums & Dummy Data
-import 'package:chat/enums/layout_mode.dart';
-import 'package:chat/dummy_data.dart';
-
 // Widgets
 import 'package:chat/widgets/empty_state.dart';
 
 // Actions
 import 'package:chat/actions/chat_actions.dart';
+
+// Enums & Dummy Data
+import 'package:chat/enums/layout_mode.dart';
+import 'package:chat/dummy_data.dart';
 
 // Helper to generate a premium background hue from a string
 Color getInitialsBgColor(String name) {
@@ -157,8 +157,8 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
                             padding: const EdgeInsets.only(bottom: 6.0),
                             child: InkWell(
                               onTap: () {
-                                // Update active navigation state index to DMs (index 1)
-                                ref.read(navIndexProvider.notifier).state = 1;
+                                // Update active navigation state index to DMs (index 0)
+                                ref.read(navIndexProvider.notifier).state = 0;
                                 
                                 // Populate active chat session
                                 ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
@@ -166,7 +166,7 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
                                   type: ChatSessionType.dm,
                                 );
                                 
-                                ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
+                                ref.read(isProfileExpandedProvider.notifier).state = false;
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: AnimatedContainer(

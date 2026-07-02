@@ -7,7 +7,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
-import 'package:chat/providers/nav_provider.dart';
 
 // Enums & Dummy Data
 import 'package:chat/enums/layout_mode.dart';
@@ -32,7 +31,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDesktop = ref.watch(layoutProvider) == LayoutMode.desktop;
-    final isProfileActive = ref.watch(isProfileActiveInSettingsDesktopProvider);
+    final isProfileExpanded = ref.watch(isProfileExpandedProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -60,23 +59,20 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                   // macOS Apple ID Card Row
                   GestureDetector(
                     onTap: () {
+                      ref.read(isProfileExpandedProvider.notifier).state = true;
                       if (isDesktop) {
-                        ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = true;
                         ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
-                      } else {
-                        // On Mobile, switch tab index to Profile (index 3)
-                        ref.read(navIndexProvider.notifier).state = 3;
                       }
                     },
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isProfileActive && isDesktop
+                        color: isProfileExpanded && isDesktop
                             ? theme.colorScheme.primaryContainer.withAlpha(120)
                             : theme.colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isProfileActive && isDesktop
+                          color: isProfileExpanded && isDesktop
                               ? theme.colorScheme.primary.withAlpha(100)
                               : theme.colorScheme.outlineVariant.withAlpha(80),
                         ),
@@ -296,23 +292,43 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
 }
 
 // Component 2: ProfileCardInspector (Column 2 Central Canvas on Desktop / Top Segment on Mobile)
-class ProfileCardInspector extends StatefulWidget {
+class ProfileCardInspector extends ConsumerStatefulWidget {
   const ProfileCardInspector({super.key});
 
   @override
-  State<ProfileCardInspector> createState() => _ProfileCardInspectorState();
+  ConsumerState<ProfileCardInspector> createState() => _ProfileCardInspectorState();
 }
 
-class _ProfileCardInspectorState extends State<ProfileCardInspector> {
+class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
   String selectedFilter = 'all';
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final filteredNotifs = _getFilteredNotifications();
+    final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
 
     // Apply layout-specific centering alignment from ideation
     return Scaffold(
+      appBar: isMobile
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new),
+                onPressed: () {
+                  ref.read(isProfileExpandedProvider.notifier).state = false;
+                },
+              ),
+              title: Text(
+                'Profile',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+            )
+          : null,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Center(
@@ -655,15 +671,5 @@ class _ProfileCardInspectorState extends State<ProfileCardInspector> {
         ),
       ),
     );
-  }
-}
-
-// Component 3: ProfileStageView (Mobile/Tablet View Stage Frame)
-class ProfileStageView extends StatelessWidget {
-  const ProfileStageView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const ProfileCardInspector();
   }
 }

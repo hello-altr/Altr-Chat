@@ -66,7 +66,7 @@ class FloatingNavPill extends ConsumerWidget {
                         onTap: () {
                           ref.read(navIndexProvider.notifier).state = index;
                           ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
-                          ref.read(isProfileActiveInSettingsDesktopProvider.notifier).state = false;
+                          ref.read(isProfileExpandedProvider.notifier).state = false;
                         },
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,

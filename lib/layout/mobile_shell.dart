@@ -6,8 +6,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/widgets/floating_nav_pill.dart';
 
 // Providers
-import 'package:chat/providers/nav_provider.dart';
 import 'package:chat/providers/chat_session_provider.dart';
+import 'package:chat/providers/chat_state_provider.dart';
+import 'package:chat/providers/nav_provider.dart';
 
 // Pages
 import 'package:chat/pages/profile_and_settings_page.dart';
@@ -41,6 +42,8 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   @override
   Widget build(BuildContext context) {
     final chatSession = ref.watch(activeChatSessionProvider);
+    final selectedIndex = ref.watch(navIndexProvider);
+    final isProfileExpanded = ref.watch(isProfileExpandedProvider);
 
     // Listen for tab taps inside the FloatingNavPill to animate the PageView smoothly
     ref.listen<int>(navIndexProvider, (previous, next) {
@@ -52,6 +55,8 @@ class _MobileShellState extends ConsumerState<MobileShell> {
         );
       }
     });
+
+    final showNavPill = chatSession.type == ChatSessionType.none && !(selectedIndex == 2 && isProfileExpanded);
 
     return Scaffold(
       extendBody: true,
@@ -65,10 +70,9 @@ class _MobileShellState extends ConsumerState<MobileShell> {
               ref.read(navIndexProvider.notifier).state = index;
             },
             children: const [
-              ChannelsStageView(),     // Index 0 (Home default landing base)
-              DmsStageView(),          // Index 1
+              DmsStageView(),          // Index 0
+              ChannelsStageView(),     // Index 1 (Home default landing base)
               SettingsIndexHub(),      // Index 2
-              ProfileStageView(),      // Index 3
             ],
           ),
 
@@ -82,8 +86,14 @@ class _MobileShellState extends ConsumerState<MobileShell> {
               ),
             ),
 
+          // Layer 2.5: Profile full-screen stack overlay
+          if (selectedIndex == 2 && isProfileExpanded)
+            const Positioned.fill(
+              child: ProfileCardInspector(),
+            ),
+
           // Layer 3: Main Navigation Pill (Only visible when overlay slide layer is detached)
-          if (chatSession.type == ChatSessionType.none)
+          if (showNavPill)
             const Positioned(
               left: 0,
               right: 0,
