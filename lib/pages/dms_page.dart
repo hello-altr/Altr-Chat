@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 // Providers
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
@@ -166,7 +167,7 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
                                   type: ChatSessionType.dm,
                                 );
                                 
-                                ref.read(isProfileExpandedProvider.notifier).state = false;
+                                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: AnimatedContainer(

@@ -5,8 +5,9 @@ import 'package:material_ui/material_ui.dart';
 
 // Providers
 import 'package:chat/providers/chat_session_provider.dart';
-import 'package:chat/providers/chat_state_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
+import 'package:chat/providers/theme_provider.dart';
 
 // Enums & Dummy Data
 import 'package:chat/enums/layout_mode.dart';
@@ -31,7 +32,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDesktop = ref.watch(layoutProvider) == LayoutMode.desktop;
-    final isProfileExpanded = ref.watch(isProfileExpandedProvider);
+    final activeSettingsPanel = ref.watch(activeSettingsPanelProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -59,7 +60,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                   // macOS Apple ID Card Row
                   GestureDetector(
                     onTap: () {
-                      ref.read(isProfileExpandedProvider.notifier).state = true;
+                      ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
                       if (isDesktop) {
                         ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
                       }
@@ -67,12 +68,12 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isProfileExpanded && isDesktop
+                        color: activeSettingsPanel == SettingsPanelType.profile && isDesktop
                             ? theme.colorScheme.primaryContainer.withAlpha(120)
                             : theme.colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isProfileExpanded && isDesktop
+                          color: activeSettingsPanel == SettingsPanelType.profile && isDesktop
                               ? theme.colorScheme.primary.withAlpha(100)
                               : theme.colorScheme.outlineVariant.withAlpha(80),
                         ),
@@ -166,6 +167,35 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                               });
                             },
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Appearance Section
+                  _buildSectionHeader('Appearance'),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingRow(
+                          icon: HugeIconsStroke.settings01,
+                          title: 'Theme Mode',
+                          trailing: Icon(
+                            HugeIconsStroke.arrowRight01,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.appearance;
+                            if (isDesktop) {
+                              ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -268,24 +298,30 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
     required IconData icon,
     required String title,
     required Widget trailing,
+    VoidCallback? onTap,
   }) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: theme.colorScheme.primary, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Row(
+          children: [
+            Icon(icon, color: theme.colorScheme.primary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          trailing,
-        ],
+            trailing,
+          ],
+        ),
       ),
     );
   }
@@ -315,7 +351,7 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new),
                 onPressed: () {
-                  ref.read(isProfileExpandedProvider.notifier).state = false;
+                  ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
                 },
               ),
               title: Text(
@@ -679,6 +715,178 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Component 3: AppearanceSettingsPanel
+class AppearanceSettingsPanel extends ConsumerWidget {
+  const AppearanceSettingsPanel({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
+    final currentThemeMode = ref.watch(themeModeProvider);
+
+    Widget content = Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600),
+        padding: const EdgeInsets.only(top: 24.0, bottom: 90, left: 16.0, right: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildSectionHeader('Theme Mode Preferences'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildThemeCard(
+                  context,
+                  ref,
+                  mode: ThemeMode.light,
+                  label: 'Light Mode',
+                  icon: Icons.light_mode_rounded,
+                  isSelected: currentThemeMode == ThemeMode.light,
+                ),
+                _buildThemeCard(
+                  context,
+                  ref,
+                  mode: ThemeMode.dark,
+                  label: 'Dark Mode',
+                  icon: Icons.dark_mode_rounded,
+                  isSelected: currentThemeMode == ThemeMode.dark,
+                ),
+                _buildThemeCard(
+                  context,
+                  ref,
+                  mode: ThemeMode.system,
+                  label: 'System Default',
+                  icon: Icons.settings_brightness_rounded,
+                  isSelected: currentThemeMode == ThemeMode.system,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (isMobile) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new),
+            onPressed: () {
+              ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+            },
+          ),
+          title: Text(
+            'Appearance',
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: content,
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey.shade500,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeCard(
+    BuildContext context,
+    WidgetRef ref, {
+    required ThemeMode mode,
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+  }) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () {
+        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+      },
+      child: Container(
+        width: 170,
+        height: 120,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primaryContainer.withAlpha(120)
+              : theme.colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outlineVariant.withAlpha(80),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Stack(
+          children: [
+            if (isSelected)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Icon(
+                  Icons.check_circle,
+                  color: theme.colorScheme.primary,
+                  size: 16,
+                ),
+              ),
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                    size: 32,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

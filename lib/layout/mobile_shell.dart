@@ -7,7 +7,7 @@ import 'package:chat/widgets/floating_nav_pill.dart';
 
 // Providers
 import 'package:chat/providers/chat_session_provider.dart';
-import 'package:chat/providers/chat_state_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Pages
@@ -43,7 +43,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
   Widget build(BuildContext context) {
     final chatSession = ref.watch(activeChatSessionProvider);
     final selectedIndex = ref.watch(navIndexProvider);
-    final isProfileExpanded = ref.watch(isProfileExpandedProvider);
+    final activeSettingsPanel = ref.watch(activeSettingsPanelProvider);
 
     // Listen for tab taps inside the FloatingNavPill to animate the PageView smoothly
     ref.listen<int>(navIndexProvider, (previous, next) {
@@ -56,7 +56,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
       }
     });
 
-    final showNavPill = chatSession.type == ChatSessionType.none && !(selectedIndex == 2 && isProfileExpanded);
+    final showNavPill = chatSession.type == ChatSessionType.none && activeSettingsPanel == SettingsPanelType.none;
 
     return Scaffold(
       extendBody: true,
@@ -87,9 +87,15 @@ class _MobileShellState extends ConsumerState<MobileShell> {
             ),
 
           // Layer 2.5: Profile full-screen stack overlay
-          if (selectedIndex == 2 && isProfileExpanded)
+          if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.profile)
             const Positioned.fill(
               child: ProfileCardInspector(),
+            ),
+
+          // Layer 2.6: Appearance full-screen stack overlay
+          if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.appearance)
+            const Positioned.fill(
+              child: AppearanceSettingsPanel(),
             ),
 
           // Layer 3: Main Navigation Pill (Only visible when overlay slide layer is detached)

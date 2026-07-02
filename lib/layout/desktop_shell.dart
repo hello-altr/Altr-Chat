@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 // Providers
 import 'package:chat/providers/chat_session_provider.dart';
-import 'package:chat/providers/chat_state_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
@@ -45,7 +45,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(navIndexProvider);
     final chatSession = ref.watch(activeChatSessionProvider);
-    final isProfileExpanded = ref.watch(isProfileExpandedProvider);
+    final activeSettingsPanel = ref.watch(activeSettingsPanelProvider);
     final theme = Theme.of(context);
 
     // Listen to tab selection changes to animate the horizontal PageView directory
@@ -127,9 +127,10 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 ],
               ),
             ),
-      2 => isProfileExpanded
-          ? const ProfileCardInspector()
-          : Center(
+      2 => switch (activeSettingsPanel) {
+          SettingsPanelType.profile => const ProfileCardInspector(),
+          SettingsPanelType.appearance => const AppearanceSettingsPanel(),
+          SettingsPanelType.none => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -156,6 +157,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 ],
               ),
             ),
+        },
       _ => const SizedBox.shrink(),
     };
 
@@ -174,7 +176,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                       ref.read(navIndexProvider.notifier).state = index;
                       // Clear chat session trace
                       ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
-                      ref.read(isProfileExpandedProvider.notifier).state = false;
+                      ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
                     },
                     children: const [
                       DirectMessagesList(),
