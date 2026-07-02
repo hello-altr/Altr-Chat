@@ -11,6 +11,7 @@ import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
+import 'package:chat/widgets/universal_search_bar.dart';
 import 'package:chat/widgets/empty_state.dart';
 
 // Actions
@@ -64,7 +65,9 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
     final searchQuery = ref.watch(dmSearchQueryProvider);
 
     final filteredDms = mockDms.where((dm) {
-      return dm.userName.toLowerCase().contains(searchQuery.toLowerCase());
+      final query = searchQuery.toLowerCase();
+      return dm.userName.toLowerCase().contains(query) ||
+          dm.lastMessage.toLowerCase().contains(query);
     }).toList();
 
     return Scaffold(
@@ -85,44 +88,18 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Stylized modern search bar
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.colorScheme.outlineVariant.withAlpha(80),
-                  ),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    ref.read(dmSearchQueryProvider.notifier).state = value;
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search chats...',
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                    ),
-                    prefixIcon: Icon(
-                      HugeIconsStroke.search01,
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                      size: 20,
-                    ),
-                    suffixIcon: searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(dmSearchQueryProvider.notifier).state = '';
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  style: theme.textTheme.bodyMedium,
-                ),
+              // Stylized modern pill search bar
+              UniversalSearchBar(
+                controller: _searchController,
+                hintText: 'Search chats...',
+                searchQuery: searchQuery,
+                onChanged: (value) {
+                  ref.read(dmSearchQueryProvider.notifier).state = value;
+                },
+                onClear: () {
+                  _searchController.clear();
+                  ref.read(dmSearchQueryProvider.notifier).state = '';
+                },
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -213,30 +190,16 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  dm.userName,
-                                                  style: theme.textTheme.titleMedium?.copyWith(
-                                                    fontWeight: isSelected && layoutMode == LayoutMode.desktop
-                                                        ? FontWeight.bold
-                                                        : FontWeight.w600,
-                                                    color: theme.colorScheme.onSurface,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                dm.time,
-                                                style: theme.textTheme.labelSmall?.copyWith(
-                                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                                                ),
-                                              ),
-                                            ],
+                                          Text(
+                                            dm.userName,
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontWeight: isSelected && layoutMode == LayoutMode.desktop
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w600,
+                                              color: theme.colorScheme.onSurface,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
@@ -250,24 +213,40 @@ class _DirectMessagesListState extends ConsumerState<DirectMessagesList> {
                                         ],
                                       ),
                                     ),
-                                    // Unread Badges
-                                    if (dm.unreadCount > 0) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary,
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Text(
-                                          '${dm.unreadCount}',
+                                    const SizedBox(width: 12),
+                                    // Time and Badge Column on the right
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          dm.time,
                                           style: theme.textTheme.labelSmall?.copyWith(
-                                            color: theme.colorScheme.onPrimary,
-                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                        if (dm.unreadCount > 0) ...[
+                                          const SizedBox(height: 4),
+                                          Container(
+                                            width: 20,
+                                            height: 20,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Text(
+                                              '${dm.unreadCount}',
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                color: theme.colorScheme.onPrimary,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),

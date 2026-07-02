@@ -6,11 +6,12 @@ import 'package:material_ui/material_ui.dart';
 // Providers
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
-import 'package:chat/providers/settings_provider.dart';
 
 // Widgets
+import 'package:chat/widgets/universal_search_bar.dart';
 import 'package:chat/widgets/empty_state.dart';
 
 // Actions
@@ -51,7 +52,9 @@ class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
     final searchQuery = ref.watch(channelSearchQueryProvider);
 
     final filteredChannels = mockChannels.where((channel) {
-      return channel.name.toLowerCase().contains(searchQuery.toLowerCase());
+      final query = searchQuery.toLowerCase();
+      return channel.name.toLowerCase().contains(query) ||
+          channel.lastMessage.toLowerCase().contains(query);
     }).toList();
 
     return Scaffold(
@@ -72,44 +75,18 @@ class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Stylized modern search bar
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.colorScheme.outlineVariant.withAlpha(80),
-                  ),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    ref.read(channelSearchQueryProvider.notifier).state = value;
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search channels...',
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                    ),
-                    prefixIcon: Icon(
-                      HugeIconsStroke.search01,
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                      size: 20,
-                    ),
-                    suffixIcon: searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(channelSearchQueryProvider.notifier).state = '';
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  style: theme.textTheme.bodyMedium,
-                ),
+              // Stylized modern pill search bar
+              UniversalSearchBar(
+                controller: _searchController,
+                hintText: 'Search channels...',
+                searchQuery: searchQuery,
+                onChanged: (value) {
+                  ref.read(channelSearchQueryProvider.notifier).state = value;
+                },
+                onClear: () {
+                  _searchController.clear();
+                  ref.read(channelSearchQueryProvider.notifier).state = '';
+                },
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -199,30 +176,16 @@ class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  '#${channel.name}',
-                                                  style: theme.textTheme.titleMedium?.copyWith(
-                                                    fontWeight: isSelected && layoutMode == LayoutMode.desktop
-                                                        ? FontWeight.bold
-                                                        : FontWeight.w600,
-                                                    color: theme.colorScheme.onSurface,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                channel.time,
-                                                style: theme.textTheme.labelSmall?.copyWith(
-                                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                                                ),
-                                              ),
-                                            ],
+                                          Text(
+                                            '#${channel.name}',
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontWeight: isSelected && layoutMode == LayoutMode.desktop
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w600,
+                                              color: theme.colorScheme.onSurface,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
@@ -236,46 +199,63 @@ class _WorkspaceChannelsTreeState extends ConsumerState<WorkspaceChannelsTree> {
                                         ],
                                       ),
                                     ),
-                                    // Badges Column
-                                    if (channel.unreadCount > 0 || channel.warningCount > 0) ...[
-                                      const SizedBox(width: 12),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          if (channel.unreadCount > 0)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: theme.colorScheme.primary,
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: Text(
-                                                '${channel.unreadCount}',
-                                                style: theme.textTheme.labelSmall?.copyWith(
-                                                  color: theme.colorScheme.onPrimary,
-                                                  fontWeight: FontWeight.bold,
+                                    const SizedBox(width: 12),
+                                    // Time and Badges Column on the right
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          channel.time,
+                                          style: theme.textTheme.labelSmall?.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                                          ),
+                                        ),
+                                        if (channel.unreadCount > 0 || channel.warningCount > 0) ...[
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (channel.unreadCount > 0)
+                                                Container(
+                                                  width: 20,
+                                                  height: 20,
+                                                  alignment: Alignment.center,
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.primary,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Text(
+                                                    '${channel.unreadCount}',
+                                                    style: theme.textTheme.labelSmall?.copyWith(
+                                                      color: theme.colorScheme.onPrimary,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ),
-                                          if (channel.warningCount > 0) ...[
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: theme.colorScheme.error,
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Icon(
-                                                HugeIconsStroke.alert02,
-                                                color: theme.colorScheme.onError,
-                                                size: 10,
-                                              ),
-                                            ),
-                                          ],
+                                              if (channel.warningCount > 0) ...[
+                                                if (channel.unreadCount > 0) const SizedBox(width: 4),
+                                                Container(
+                                                  width: 20,
+                                                  height: 20,
+                                                  alignment: Alignment.center,
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.error,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Icon(
+                                                    HugeIconsStroke.alert02,
+                                                    color: theme.colorScheme.onError,
+                                                    size: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
                                         ],
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
