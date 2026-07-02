@@ -12,7 +12,10 @@ final authStateProvider = StreamProvider<User?>((ref) {
 
 Future<void> signInWithGoogle(BuildContext context) async {
   try {
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    final GoogleSignIn googleSignIn = GoogleSignIn(
+      clientId: '1085731614579-7o5itj8fbh0h7prujtt4suvqsl6latg4.apps.googleusercontent.com',
+    );
+    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
     if (googleUser == null) {
       return;
     }
