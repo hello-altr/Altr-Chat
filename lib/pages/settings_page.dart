@@ -40,7 +40,9 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
     final displayName = currentUser?.displayName ?? 'Aero User';
     final emailId = currentUser?.email ?? 'user@helloaltr.com';
     final photoUrl = currentUser?.photoURL;
-    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
+    final initials = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : 'A';
 
     return Scaffold(
       body: SafeArea(
@@ -63,25 +65,36 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
             const SizedBox(height: 16),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 90),
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 90,
+                ),
                 children: [
                   // macOS Apple ID Card Row
                   GestureDetector(
                     onTap: () {
-                      ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+                      ref.read(activeSettingsPanelProvider.notifier).state =
+                          SettingsPanelType.profile;
                       if (isDesktop) {
-                        ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                        ref.read(activeChatSessionProvider.notifier).state =
+                            const ActiveChatSession();
                       }
                     },
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: activeSettingsPanel == SettingsPanelType.profile && isDesktop
+                        color:
+                            activeSettingsPanel == SettingsPanelType.profile &&
+                                isDesktop
                             ? theme.colorScheme.primaryContainer.withAlpha(120)
                             : theme.colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: activeSettingsPanel == SettingsPanelType.profile && isDesktop
+                          color:
+                              activeSettingsPanel ==
+                                      SettingsPanelType.profile &&
+                                  isDesktop
                               ? theme.colorScheme.primary.withAlpha(100)
                               : theme.colorScheme.outlineVariant.withAlpha(80),
                         ),
@@ -93,26 +106,32 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                             height: 50,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: photoUrl == null ? LinearGradient(
-                                colors: [
-                                  theme.colorScheme.primary,
-                                  theme.colorScheme.secondary,
-                                ],
-                              ) : null,
-                              image: photoUrl != null ? DecorationImage(
-                                image: NetworkImage(photoUrl),
-                                fit: BoxFit.cover,
-                              ) : null,
+                              gradient: photoUrl == null
+                                  ? LinearGradient(
+                                      colors: [
+                                        theme.colorScheme.primary,
+                                        theme.colorScheme.secondary,
+                                      ],
+                                    )
+                                  : null,
+                              image: photoUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(photoUrl),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                             ),
                             alignment: Alignment.center,
-                            child: photoUrl != null ? null : Text(
-                              initials,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
-                            ),
+                            child: photoUrl != null
+                                ? null
+                                : Text(
+                                    initials,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                    ),
+                                  ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -145,7 +164,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Grouped iOS Settings Style Group 1
                   _buildSectionHeader('Preferences'),
                   Container(
@@ -155,7 +174,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                     ),
                     child: Column(
                       children: [
-                        _buildSettingRow(
+                        _buildSettingItem(
                           icon: HugeIconsStroke.notification01,
                           title: 'Notification Preferences',
                           trailing: Switch(
@@ -167,8 +186,12 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                             },
                           ),
                         ),
-                        Divider(height: 1, indent: 48, color: theme.colorScheme.outlineVariant.withAlpha(80)),
-                        _buildSettingRow(
+                        Divider(
+                          height: 1,
+                          indent: 48,
+                          color: theme.colorScheme.outlineVariant.withAlpha(80),
+                        ),
+                        _buildSettingItem(
                           icon: HugeIconsStroke.securityValidation,
                           title: 'Domain-Match Verification',
                           trailing: Switch(
@@ -194,7 +217,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                     ),
                     child: Column(
                       children: [
-                        _buildSettingRow(
+                        _buildSettingItem(
                           icon: HugeIconsStroke.settings01,
                           title: 'Theme Mode',
                           trailing: Icon(
@@ -203,24 +226,16 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                             size: 18,
                           ),
                           onTap: () {
-                            ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.appearance;
+                            ref
+                                    .read(activeSettingsPanelProvider.notifier)
+                                    .state =
+                                SettingsPanelType.appearance;
                             if (isDesktop) {
-                              ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                              ref
+                                      .read(activeChatSessionProvider.notifier)
+                                      .state =
+                                  const ActiveChatSession();
                             }
-                          },
-                        ),
-                        Divider(height: 1, indent: 48, color: theme.colorScheme.outlineVariant.withAlpha(80)),
-                        _buildSettingRow(
-                          icon: HugeIconsStroke.logout01,
-                          title: 'Sign Out',
-                          trailing: Icon(
-                            HugeIconsStroke.arrowRight01,
-                            color: theme.colorScheme.error,
-                            size: 18,
-                          ),
-                          onTap: () async {
-                            await FirebaseAuth.instance.signOut();
-                            await GoogleSignIn().signOut();
                           },
                         ),
                       ],
@@ -249,7 +264,11 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                       children: [
                         Row(
                           children: [
-                            Icon(HugeIconsStroke.walletAdd01, color: theme.colorScheme.primary, size: 24),
+                            Icon(
+                              HugeIconsStroke.walletAdd01,
+                              color: theme.colorScheme.primary,
+                              size: 24,
+                            ),
                             const SizedBox(width: 12),
                             Text(
                               'Digital Wallet',
@@ -276,11 +295,16 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                               style: theme.textTheme.bodyMedium,
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.green.withAlpha(40),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green.withAlpha(100)),
+                                border: Border.all(
+                                  color: Colors.green.withAlpha(100),
+                                ),
                               ),
                               child: const Text(
                                 'Synchronized',
@@ -296,6 +320,30 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // Session / Account Section
+                  _buildSectionHeader('Account'),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingItem(
+                          icon: HugeIconsStroke.logout01,
+                          title: 'Sign Out',
+                          trailing: Icon(
+                            HugeIconsStroke.arrowRight01,
+                            color: theme.colorScheme.error,
+                            size: 18,
+                          ),
+                          onTap: () => _showSignOutDialog(context),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -303,6 +351,52 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
         ),
       ),
     );
+  }
+
+  Future<void> _showSignOutDialog(BuildContext context) async {
+    final theme = Theme.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        final dialog = AlertDialog(
+          constraints: BoxConstraints(maxWidth: 400),
+          title: Row(
+            children: [
+              Icon(HugeIconsStroke.logout01, color: theme.colorScheme.error),
+              const SizedBox(width: 8),
+              const Text('Sign Out'),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to sign out? You will need to sign in again to access your chats.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+              ),
+              child: const Text('Sign Out'),
+            ),
+          ],
+        );
+
+        return dialog;
+      },
+    );
+
+    if (confirm == true) {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
+    }
   }
 
   Widget _buildSectionHeader(String title) {
@@ -320,7 +414,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
     );
   }
 
-  Widget _buildSettingRow({
+  Widget _buildSettingItem({
     required IconData icon,
     required String title,
     required Widget trailing,
@@ -358,7 +452,8 @@ class ProfileCardInspector extends ConsumerStatefulWidget {
   const ProfileCardInspector({super.key});
 
   @override
-  ConsumerState<ProfileCardInspector> createState() => _ProfileCardInspectorState();
+  ConsumerState<ProfileCardInspector> createState() =>
+      _ProfileCardInspectorState();
 }
 
 class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
@@ -374,8 +469,12 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
     final displayName = currentUser?.displayName ?? 'Aero User';
     final emailId = currentUser?.email ?? 'user@helloaltr.com';
     final photoUrl = currentUser?.photoURL;
-    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
-    final usernameHandle = currentUser?.email != null ? '@${currentUser!.email!.split("@")[0]}' : '@aero_user';
+    final initials = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : 'A';
+    final usernameHandle = currentUser?.email != null
+        ? '@${currentUser!.email!.split("@")[0]}'
+        : '@aero_user';
 
     // Apply layout-specific centering alignment from ideation
     return Scaffold(
@@ -384,7 +483,8 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new),
                 onPressed: () {
-                  ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+                  ref.read(activeSettingsPanelProvider.notifier).state =
+                      SettingsPanelType.none;
                 },
               ),
               title: Text(
@@ -403,180 +503,204 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
           child: Center(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 600),
-              padding: const EdgeInsets.only(top: 24.0, bottom: 90, left: 16.0, right: 16.0),
+              padding: const EdgeInsets.only(
+                top: 24.0,
+                bottom: 90,
+                left: 16.0,
+                right: 16.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                // Centered Profile Avatar card
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: photoUrl == null ? LinearGradient(
-                            colors: [
-                              theme.colorScheme.primary,
-                              theme.colorScheme.secondary,
+                  // Centered Profile Avatar card
+                  Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 90,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: photoUrl == null
+                                ? LinearGradient(
+                                    colors: [
+                                      theme.colorScheme.primary,
+                                      theme.colorScheme.secondary,
+                                    ],
+                                  )
+                                : null,
+                            image: photoUrl != null
+                                ? DecorationImage(
+                                    image: NetworkImage(photoUrl),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withAlpha(40),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
                             ],
-                          ) : null,
-                          image: photoUrl != null ? DecorationImage(
-                            image: NetworkImage(photoUrl),
-                            fit: BoxFit.cover,
-                          ) : null,
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.primary.withAlpha(40),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                          ),
+                          alignment: Alignment.center,
+                          child: photoUrl != null
+                              ? null
+                              : Text(
+                                  initials,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
-                        alignment: Alignment.center,
-                        child: photoUrl != null ? null : Text(
-                          initials,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
+                        const SizedBox(height: 16),
+                        Text(
+                          displayName,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        displayName,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
+                        const SizedBox(height: 4),
+                        Text(
+                          usernameHandle,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        usernameHandle,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Quick Actions Row with even widths and even spacing
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: HugeIconsStroke.image02,
-                        label: 'Change Photo',
-                        onTap: () {},
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: HugeIconsStroke.edit01,
-                        label: 'Edit Info',
-                        onTap: () {},
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: HugeIconsStroke.share01,
-                        label: 'Share Profile',
-                        onTap: () {},
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Details Card
-                _buildSectionHeader('Profile Details'),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withAlpha(80),
+                      ],
                     ),
                   ),
-                  child: Column(
+                  const SizedBox(height: 24),
+
+                  // Quick Actions Row with even widths and even spacing
+                  Row(
                     children: [
-                      _buildDetailRow(
-                        icon: HugeIconsStroke.mail01,
-                        label: 'Email ID',
-                        value: emailId,
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: HugeIconsStroke.image02,
+                          label: 'Change Photo',
+                          onTap: () {},
+                        ),
                       ),
-                      Divider(height: 24, color: theme.colorScheme.outlineVariant.withAlpha(80)),
-                      _buildDetailRow(
-                        icon: HugeIconsStroke.taskDone01,
-                        label: 'Bio',
-                        value: 'Building the future of agent-first real-time chat communication on HelloAltr.',
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: HugeIconsStroke.edit01,
+                          label: 'Edit Info',
+                          onTap: () {},
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: HugeIconsStroke.share01,
+                          label: 'Share Profile',
+                          onTap: () {},
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
-                // Notification Panel
-                _buildSectionHeader('Notification Panel (Slack Activity Style)'),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _buildFilterChip('All', 'all'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Mentions', 'mentions'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Registrations', 'registrations'),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                
-                // Grouped Notification Container (iOS settings style)
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withAlpha(80),
+                  // Details Card
+                  _buildSectionHeader('Profile Details'),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withAlpha(80),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildDetailRow(
+                          icon: HugeIconsStroke.mail01,
+                          label: 'Email ID',
+                          value: emailId,
+                        ),
+                        Divider(
+                          height: 24,
+                          color: theme.colorScheme.outlineVariant.withAlpha(80),
+                        ),
+                        _buildDetailRow(
+                          icon: HugeIconsStroke.taskDone01,
+                          label: 'Bio',
+                          value:
+                              'Building the future of agent-first real-time chat communication on HelloAltr.',
+                        ),
+                      ],
                     ),
                   ),
-                  child: filteredNotifs.isEmpty
-                      ? EmptyStateWidget(
-                          icon: HugeIconsStroke.notification01,
-                          title: "No notifications",
-                          subtitle: selectedFilter != 'all'
-                              ? "No activities found in the '$selectedFilter' category."
-                              : "You are all caught up! No notifications yet.",
-                          onActionPressed: selectedFilter != 'all'
-                              ? () {
-                                  setState(() {
-                                    selectedFilter = 'all';
-                                  });
-                                }
-                              : null,
-                          actionLabel: selectedFilter != 'all' ? "Show all" : null,
-                        )
-                      : Column(
-                          children: filteredNotifs.map((notif) {
-                            final isLast = filteredNotifs.last == notif;
-                            return Column(
-                              children: [
-                                _buildNotificationCard(notif),
-                                if (!isLast)
-                                  Divider(height: 1, indent: 16, color: theme.colorScheme.outlineVariant.withAlpha(80)),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                ),
-              ],
+                  const SizedBox(height: 28),
+
+                  // Notification Panel
+                  _buildSectionHeader(
+                    'Notification Panel (Slack Activity Style)',
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildFilterChip('All', 'all'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Mentions', 'mentions'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Registrations', 'registrations'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Grouped Notification Container (iOS settings style)
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withAlpha(80),
+                      ),
+                    ),
+                    child: filteredNotifs.isEmpty
+                        ? EmptyStateWidget(
+                            icon: HugeIconsStroke.notification01,
+                            title: "No notifications",
+                            subtitle: selectedFilter != 'all'
+                                ? "No activities found in the '$selectedFilter' category."
+                                : "You are all caught up! No notifications yet.",
+                            onActionPressed: selectedFilter != 'all'
+                                ? () {
+                                    setState(() {
+                                      selectedFilter = 'all';
+                                    });
+                                  }
+                                : null,
+                            actionLabel: selectedFilter != 'all'
+                                ? "Show all"
+                                : null,
+                          )
+                        : Column(
+                            children: filteredNotifs.map((notif) {
+                              final isLast = filteredNotifs.last == notif;
+                              return Column(
+                                children: [
+                                  _buildNotificationCard(notif),
+                                  if (!isLast)
+                                    Divider(
+                                      height: 1,
+                                      indent: 16,
+                                      color: theme.colorScheme.outlineVariant
+                                          .withAlpha(80),
+                                    ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -589,7 +713,9 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
     if (selectedFilter == 'all') {
       return mockNotifications;
     }
-    return mockNotifications.where((notif) => notif.category == selectedFilter).toList();
+    return mockNotifications
+        .where((notif) => notif.category == selectedFilter)
+        .toList();
   }
 
   Widget _buildFilterChip(String label, String value) {
@@ -608,7 +734,9 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
       selectedColor: theme.colorScheme.primaryContainer,
       labelStyle: TextStyle(
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurfaceVariant,
+        color: isSelected
+            ? theme.colorScheme.onPrimaryContainer
+            : theme.colorScheme.onSurfaceVariant,
       ),
     );
   }
@@ -630,8 +758,8 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
               notification.category == 'registrations'
                   ? HugeIconsStroke.userCircle02
                   : (notification.chatName.startsWith('#')
-                      ? HugeIconsStroke.hashtag
-                      : HugeIconsStroke.user),
+                        ? HugeIconsStroke.hashtag
+                        : HugeIconsStroke.user),
               color: theme.colorScheme.primary,
               size: 16,
             ),
@@ -710,10 +838,7 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: theme.textTheme.bodyMedium,
-              ),
+              Text(value, style: theme.textTheme.bodyMedium),
             ],
           ),
         ),
@@ -773,7 +898,12 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     Widget content = Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600),
-        padding: const EdgeInsets.only(top: 24.0, bottom: 90, left: 16.0, right: 16.0),
+        padding: const EdgeInsets.only(
+          top: 24.0,
+          bottom: 90,
+          left: 16.0,
+          right: 16.0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -820,7 +950,8 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new),
             onPressed: () {
-              ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+              ref.read(activeSettingsPanelProvider.notifier).state =
+                  SettingsPanelType.none;
             },
           ),
           title: Text(
@@ -833,20 +964,12 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: content,
-          ),
-        ),
+        body: SafeArea(child: SingleChildScrollView(child: content)),
       );
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: content,
-        ),
-      ),
+      body: SafeArea(child: SingleChildScrollView(child: content)),
     );
   }
 
@@ -911,15 +1034,21 @@ class AppearanceSettingsPanel extends ConsumerWidget {
                 children: [
                   Icon(
                     icon,
-                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
                     size: 32,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     label,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.onSurface,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isSelected
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.onSurface,
                     ),
                   ),
                 ],

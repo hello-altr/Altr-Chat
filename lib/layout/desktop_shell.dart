@@ -10,6 +10,7 @@ import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
 import 'package:chat/widgets/floating_nav_pill.dart';
+import 'package:chat/widgets/empty_state.dart';
 
 // Pages
 import 'package:chat/pages/shared_chat_canvas.dart';
@@ -131,30 +132,13 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
           SettingsPanelType.profile => const ProfileCardInspector(),
           SettingsPanelType.appearance => const AppearanceSettingsPanel(),
           SettingsPanelType.none => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    HugeIconsStroke.settings01,
-                    size: 64,
-                    color: theme.colorScheme.onSurfaceVariant.withAlpha(50),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Aero Settings Details Canvas",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Click the profile banner or preferences to view details.",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
-                    ),
-                  ),
-                ],
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420.0),
+                child: const EmptyStateWidget(
+                  icon: Icons.palette_outlined,
+                  title: "Appearance Settings",
+                  subtitle: "Select a configuration option from the index tier panel to begin personalization profiles.",
+                ),
               ),
             ),
         },
