@@ -179,7 +179,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
             behavior: HitTestBehavior.translucent,
             onHorizontalDragUpdate: (details) {
               setState(() {
-                _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(240.0, 480.0);
+                _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(440.0, 620.0);
               });
             },
             child: MouseRegion(
