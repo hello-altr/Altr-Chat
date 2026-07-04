@@ -899,6 +899,65 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
     final currentThemeMode = ref.watch(themeModeProvider);
 
+    Widget themeSelectionRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildThemeOption(
+          context,
+          ref,
+          mode: ThemeMode.system,
+          label: 'Auto',
+          isSelected: currentThemeMode == ThemeMode.system,
+        ),
+        const SizedBox(width: 16),
+        _buildThemeOption(
+          context,
+          ref,
+          mode: ThemeMode.light,
+          label: 'Light',
+          isSelected: currentThemeMode == ThemeMode.light,
+        ),
+        const SizedBox(width: 16),
+        _buildThemeOption(
+          context,
+          ref,
+          mode: ThemeMode.dark,
+          label: 'Dark',
+          isSelected: currentThemeMode == ThemeMode.dark,
+        ),
+      ],
+    );
+
+    Widget appearanceContent;
+    if (isMobile) {
+      appearanceContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Appearance',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(child: themeSelectionRow),
+        ],
+      );
+    } else {
+      appearanceContent = Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Appearance',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          themeSelectionRow,
+        ],
+      );
+    }
+
     Widget content = Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600),
@@ -930,45 +989,17 @@ class AppearanceSettingsPanel extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16.0),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _buildThemeCard(
-                      context,
-                      ref,
-                      mode: ThemeMode.light,
-                      label: 'Light Mode',
-                      icon: HugeIconsSolid.sun01,
-                      isSelected: currentThemeMode == ThemeMode.light,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildThemeCard(
-                      context,
-                      ref,
-                      mode: ThemeMode.dark,
-                      label: 'Dark Mode',
-                      icon: HugeIconsSolid.moon02,
-                      isSelected: currentThemeMode == ThemeMode.dark,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildThemeCard(
-                      context,
-                      ref,
-                      mode: ThemeMode.system,
-                      label: 'System Default',
-                      icon: HugeIconsSolid.darkMode,
-                      isSelected: currentThemeMode == ThemeMode.system,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withAlpha(80),
+                ),
               ),
+              child: appearanceContent,
             ),
           ],
         ),
@@ -1004,69 +1035,184 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildThemeCard(
+  Widget _buildThemeOption(
     BuildContext context,
     WidgetRef ref, {
     required ThemeMode mode,
     required String label,
-    required IconData icon,
     required bool isSelected,
-    String? subtitle,
   }) {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
         ref.read(themeModeProvider.notifier).setThemeMode(mode);
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? theme.colorScheme.primaryContainer.withAlpha(120)
-              : theme.colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outlineVariant.withAlpha(80),
-            width: isSelected ? 2.0 : 1.0,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildThemePreview(
+            context,
+            mode: mode,
+            isSelected: isSelected,
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isSelected
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-              size: 32,
+                  : theme.colorScheme.onSurface,
             ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? theme.colorScheme.onPrimaryContainer
-                    : theme.colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemePreview(
+    BuildContext context, {
+    required ThemeMode mode,
+    required bool isSelected,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      width: 120,
+      height: 72,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outlineVariant.withAlpha(80),
+          width: isSelected ? 2.0 : 1.0,
         ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: mode == ThemeMode.system
+            ? Row(
+                children: [
+                  Expanded(child: _buildWindowContent(context, isDark: false, isSplit: true)),
+                  Expanded(child: _buildWindowContent(context, isDark: true, isSplit: true)),
+                ],
+              )
+            : _buildWindowContent(context, isDark: mode == ThemeMode.dark, isSplit: false),
+      ),
+    );
+  }
+
+  Widget _buildWindowContent(
+    BuildContext context, {
+    required bool isDark,
+    required bool isSplit,
+  }) {
+    final lightWallpaper = const LinearGradient(
+      begin: Alignment.topRight,
+      end: Alignment.bottomLeft,
+      colors: [
+        Color(0xFFE2F1FF),
+        Color(0xFF89C6FF),
+        Color(0xFF3B82F6),
+      ],
+    );
+
+    final darkWallpaper = const LinearGradient(
+      begin: Alignment.topRight,
+      end: Alignment.bottomLeft,
+      colors: [
+        Color(0xFF1E1E38),
+        Color(0xFF3B3B75),
+        Color(0xFF1D4ED8),
+      ],
+    );
+
+    final wallpaper = isDark ? darkWallpaper : lightWallpaper;
+    final panelColor = isDark
+        ? const Color(0xFF0F172A).withAlpha(200)
+        : const Color(0xFFF1F5F9).withAlpha(200);
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: wallpaper,
+      ),
+      child: Stack(
+        children: [
+          // Top Panel / Menu Bar representation
+          Positioned(
+            top: 4,
+            left: 4,
+            right: 4,
+            child: Container(
+              height: 10,
+              decoration: BoxDecoration(
+                color: panelColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: isSplit ? 10 : 16,
+                height: 2,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF94A3B8),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+            ),
+          ),
+          // Content Card / App Window body representation
+          Positioned(
+            bottom: 0,
+            right: 0,
+            left: isSplit ? 4 : 8,
+            top: 18,
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(25),
+                    blurRadius: 2,
+                    offset: const Offset(-1, -1),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.only(left: 3, top: 3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Red, Yellow, Green window dots
+                  _buildDot(const Color(0xFFFF5F56)),
+                  const SizedBox(width: 2),
+                  _buildDot(const Color(0xFFFFBD2E)),
+                  if (!isSplit) ...[
+                    const SizedBox(width: 2),
+                    _buildDot(const Color(0xFF27C93F)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDot(Color color) {
+    return Container(
+      width: 3,
+      height: 3,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
       ),
     );
   }
