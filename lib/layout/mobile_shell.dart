@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Widgets
+import 'package:chat/widgets/workspace_dropdown_switcher.dart';
 import 'package:chat/widgets/floating_nav_pill.dart';
 
 // Providers
@@ -48,11 +49,15 @@ class _MobileShellState extends ConsumerState<MobileShell> {
     // Listen for tab taps inside the FloatingNavPill to animate the PageView smoothly
     ref.listen<int>(navIndexProvider, (previous, next) {
       if (_pageController.hasClients && next != _pageController.page?.round()) {
-        _pageController.animateToPage(
-          next,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.fastOutSlowIn,
-        );
+        if (previous != null && (next - previous).abs() > 1) {
+          _pageController.jumpToPage(next);
+        } else {
+          _pageController.animateToPage(
+            next,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.fastOutSlowIn,
+          );
+        }
       }
     });
 
@@ -75,6 +80,13 @@ class _MobileShellState extends ConsumerState<MobileShell> {
               SettingsIndexHub(),      // Index 2
             ],
           ),
+          // Layer 1.5: Fixed Top-Right Workspace Switcher
+          if (showNavPill)
+            Positioned(
+              top: 12.0 + MediaQuery.of(context).padding.top,
+              right: 16.0,
+              child: const WorkspaceDropdownSwitcher(),
+            ),
 
           // Layer 2: RESPONSIVE FULL-BLEED ACTIVE OVERLAY
           // Captures absolute mobile priority focus whenever a chat session is declared active globally

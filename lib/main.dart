@@ -11,8 +11,8 @@ import 'package:chat/providers/theme_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
 
 // Pages
-import 'package:chat/pages/onboarding_page.dart';
 import 'package:chat/pages/workspace_onboarding_page.dart';
+import 'package:chat/pages/onboarding_page.dart';
 import 'package:chat/pages/welcome_page.dart';
 import 'package:chat/pages/splash_page.dart';
 

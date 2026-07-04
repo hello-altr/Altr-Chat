@@ -1,8 +1,8 @@
 // Packages
-import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:material_ui/material_ui.dart';
+import 'dart:math';
 
 // Widgets
 import 'package:chat/widgets/segmented_progress_bar.dart';
@@ -1150,6 +1150,59 @@ class _WorkspaceFlowCanvasState extends ConsumerState<WorkspaceFlowCanvas> {
         icon: const Text('Next'),
         label: const Icon(Icons.arrow_forward, size: 16),
       ),
+    );
+  }
+}
+
+void openAddWorkspaceFlow(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  final isMobile = width < 840;
+
+  if (isMobile) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const Scaffold(
+          body: WorkspaceFlowCanvas(
+            contextType: WorkspaceFlowContext.settingsHub,
+          ),
+        ),
+      ),
+    );
+  } else {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.45),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 680,
+                maxHeight: 600,
+              ),
+              child: Card(
+                elevation: 12,
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                color: theme.colorScheme.surfaceContainer,
+                child: WorkspaceFlowCanvas(
+                  contextType: WorkspaceFlowContext.settingsHub,
+                  onCompleted: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

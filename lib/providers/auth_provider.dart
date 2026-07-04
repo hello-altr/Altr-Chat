@@ -10,6 +10,9 @@ import 'package:flutter/foundation.dart';
 import 'package:chat/repositories/user_repository.dart';
 import 'package:chat/models/user_model.dart';
 
+// Repositories & Services
+import 'package:chat/services/device_service.dart';
+
 // Provides continuous reactive exposure of the active Firebase Auth state
 final authStateProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
@@ -26,6 +29,46 @@ final userProfileProvider = FutureProvider<AltrUser?>((ref) async {
   final doc = await FirebaseFirestore.instance.collection('users').doc(authState.uid).get();
   if (doc.exists && doc.data() != null) {
     return AltrUser.fromMap(doc.data()!);
+  }
+  return null;
+});
+
+final deviceIdProvider = FutureProvider<String>((ref) async {
+  return await DeviceService.getDeviceId();
+});
+
+final currentWorkspaceIdProvider = Provider<String?>((ref) {
+  final user = ref.watch(userProfileProvider).value;
+  final deviceId = ref.watch(deviceIdProvider).value;
+  if (user == null) return null;
+  final selected = deviceId != null ? user.currentWorkspaces[deviceId] : null;
+  if (selected != null && selected.isNotEmpty) return selected;
+  return user.activeWorkspaces.isNotEmpty ? user.activeWorkspaces.first : null;
+});
+
+final userWorkspacesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final user = ref.watch(userProfileProvider).value;
+  if (user == null || user.activeWorkspaces.isEmpty) return [];
+
+  final List<Map<String, dynamic>> workspaces = [];
+  for (final wsId in user.activeWorkspaces) {
+    final doc = await FirebaseFirestore.instance.collection('workspaces').doc(wsId).get();
+    if (doc.exists && doc.data() != null) {
+      workspaces.add(doc.data()!);
+    }
+  }
+  return workspaces;
+});
+
+final currentWorkspaceProvider = Provider<Map<String, dynamic>?>((ref) {
+  final workspaces = ref.watch(userWorkspacesProvider).value ?? [];
+  final activeId = ref.watch(currentWorkspaceIdProvider);
+  if (activeId == null) return null;
+  
+  for (final ws in workspaces) {
+    if (ws['id'] == activeId) {
+      return ws;
+    }
   }
   return null;
 });

@@ -36,7 +36,7 @@ class FloatingNavPill extends ConsumerWidget {
           child: Container(
             height: isDesktop ? 54 : 64,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(isDesktop ? 20 : 32),
+              borderRadius: BorderRadius.circular(isDesktop ? 28 : 44),
               border: Border.all(
                 color: theme.colorScheme.onSurface.withAlpha(25),
                 width: 0.5,
@@ -50,7 +50,7 @@ class FloatingNavPill extends ConsumerWidget {
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(isDesktop ? 20 : 32),
+              borderRadius: BorderRadius.circular(isDesktop ? 28 : 44),
               child: Container(
                 color: theme.colorScheme.surface.withAlpha(220),
                 padding: const EdgeInsets.symmetric(horizontal: 6),
