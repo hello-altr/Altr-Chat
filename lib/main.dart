@@ -11,6 +11,7 @@ import 'package:chat/providers/theme_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
 
 // Pages
+import 'package:chat/pages/onboarding_page.dart';
 import 'package:chat/pages/welcome_page.dart';
 import 'package:chat/pages/splash_page.dart';
 
@@ -39,24 +40,28 @@ class AltrChat extends ConsumerWidget {
     TextTheme textTheme = createTextTheme(context, "Inter", "Montserrat");
     MaterialTheme theme = MaterialTheme(textTheme);
     final currentThemeMode = ref.watch(themeModeProvider);
-    final authState = ref.watch(authStateProvider);
+    final userProfile = ref.watch(userProfileProvider);
     final splashDelay = ref.watch(splashDelayProvider);
 
     final Widget homeScreen;
     if (splashDelay.isLoading) {
-      homeScreen = const SplashPage();
+      homeScreen = const SplashLoadingView();
     } else {
-      homeScreen = authState.when(
-        data: (user) {
-          if (user != null) {
-            return const LayoutShell();
+      homeScreen = userProfile.when(
+        data: (altrUser) {
+          if (altrUser == null) {
+            return const WelcomeAuthenticationView();
           }
-          return const WelcomePage();
+          if (!altrUser.onboardingCompleted) {
+            return const OnboardingPage();
+          }
+          return const LayoutShell();
         },
-        loading: () => const SplashPage(),
-        error: (err, stack) => const WelcomePage(),
+        loading: () => const SplashLoadingView(),
+        error: (err, stack) => const WelcomeAuthenticationView(),
       );
     }
+
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,

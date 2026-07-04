@@ -93,3 +93,6 @@ class SplashPage extends StatelessWidget {
     }
   }
 }
+
+typedef SplashLoadingView = SplashPage;
+

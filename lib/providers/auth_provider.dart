@@ -4,12 +4,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
-
 import 'package:flutter/foundation.dart';
+
+// Models & Repositories
+import 'package:chat/repositories/user_repository.dart';
+import 'package:chat/models/user_model.dart';
 
 // Provides continuous reactive exposure of the active Firebase Auth state
 final authStateProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
+});
+
+final userProfileProvider = FutureProvider<AltrUser?>((ref) async {
+  final authState = ref.watch(authStateProvider).value;
+  if (authState == null) return null;
+
+
+  final userRepository = UserRepository();
+  await userRepository.syncGoogleUserToFirestore(authState);
+
+  final doc = await FirebaseFirestore.instance.collection('users').doc(authState.uid).get();
+  if (doc.exists && doc.data() != null) {
+    return AltrUser.fromMap(doc.data()!);
+  }
+  return null;
 });
 
 Future<void> signInWithGoogle(BuildContext context) async {
@@ -30,17 +48,7 @@ Future<void> signInWithGoogle(BuildContext context) async {
       idToken: googleAuth.idToken,
     );
 
-    final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-    final User? user = userCredential.user;
-
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'user_id': user.uid,
-        'display_name': user.displayName ?? 'Aero User',
-        'email_id': user.email ?? 'user@helloaltr.com',
-        'photo_url': user.photoURL ?? '',
-      }, SetOptions(merge: true));
-    }
+    await FirebaseAuth.instance.signInWithCredential(credential);
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -53,3 +61,4 @@ Future<void> signInWithGoogle(BuildContext context) async {
     }
   }
 }
+

@@ -99,3 +99,6 @@ class WelcomePage extends StatelessWidget {
     }
   }
 }
+
+typedef WelcomeAuthenticationView = WelcomePage;
+

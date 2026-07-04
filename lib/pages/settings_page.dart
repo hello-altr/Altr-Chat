@@ -10,6 +10,8 @@ import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/theme_provider.dart';
+import 'package:chat/providers/auth_provider.dart';
+
 
 // Enums & Dummy Data
 import 'package:chat/enums/layout_mode.dart';
@@ -466,15 +468,22 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
     final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
 
     final currentUser = FirebaseAuth.instance.currentUser;
-    final displayName = currentUser?.displayName ?? 'Aero User';
-    final emailId = currentUser?.email ?? 'user@helloaltr.com';
-    final photoUrl = currentUser?.photoURL;
+    final userProfile = ref.watch(userProfileProvider).value;
+
+    final displayName = userProfile?.displayName ?? currentUser?.displayName ?? 'Aero User';
+    final emailId = userProfile?.emailId ?? currentUser?.email ?? 'user@helloaltr.com';
+    final photoUrl = userProfile?.photoUrl.isNotEmpty == true
+        ? userProfile!.photoUrl
+        : currentUser?.photoURL;
     final initials = displayName.isNotEmpty
         ? displayName[0].toUpperCase()
         : 'A';
-    final usernameHandle = currentUser?.email != null
-        ? '@${currentUser!.email!.split("@")[0]}'
-        : '@aero_user';
+    final usernameHandle = userProfile?.userName != null && userProfile!.userName.isNotEmpty
+        ? '@${userProfile.userName}'
+        : (currentUser?.email != null
+            ? '@${currentUser!.email!.split("@")[0]}'
+            : '@aero_user');
+
 
     // Apply layout-specific centering alignment from ideation
     return Scaffold(
