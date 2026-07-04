@@ -31,9 +31,6 @@ class SettingsIndexHub extends ConsumerStatefulWidget {
 }
 
 class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
-  bool notificationPrefs = true;
-  bool domainMatchVerification = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -169,111 +166,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Grouped iOS Settings Style Group 1
-                  _buildSectionHeader('Preferences'),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingItem(
-                          icon: HugeIconsStroke.notification01,
-                          title: 'Notification Preferences',
-                          trailing: Switch(
-                            value: notificationPrefs,
-                            onChanged: (val) {
-                              setState(() {
-                                notificationPrefs = val;
-                              });
-                            },
-                          ),
-                        ),
-                        Divider(
-                          height: 1,
-                          indent: 48,
-                          color: theme.colorScheme.outlineVariant.withAlpha(80),
-                        ),
-                        _buildSettingItem(
-                          icon: HugeIconsStroke.securityValidation,
-                          title: 'Domain-Match Verification',
-                          trailing: Switch(
-                            value: domainMatchVerification,
-                            onChanged: (val) {
-                              setState(() {
-                                domainMatchVerification = val;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Workspaces Section
-                  _buildSectionHeader('Workspaces'),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingItem(
-                          icon: HugeIconsStroke.hashtag,
-                          title: 'Add Workspace',
-                          trailing: Icon(
-                            HugeIconsStroke.arrowRight01,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            size: 18,
-                          ),
-                          onTap: () {
-                            openAddWorkspaceFlow(context);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Appearance Section
-                  _buildSectionHeader('Appearance'),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingItem(
-                          icon: HugeIconsStroke.settings01,
-                          title: 'Theme Mode',
-                          trailing: Icon(
-                            HugeIconsStroke.arrowRight01,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            size: 18,
-                          ),
-                          onTap: () {
-                            ref
-                                    .read(activeSettingsPanelProvider.notifier)
-                                    .state =
-                                SettingsPanelType.appearance;
-                            if (isDesktop) {
-                              ref
-                                      .read(activeChatSessionProvider.notifier)
-                                      .state =
-                                  const ActiveChatSession();
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Grouped iOS Settings Style Group 2
+                  // Wallet Section
                   _buildSectionHeader('Ledger & Wallet'),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -352,12 +245,86 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                   ),
                   const SizedBox(height: 24),
 
+                  // Workspaces Section
+                  _buildSectionHeader('Workspaces'),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withAlpha(80),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingItem(
+                          icon: HugeIconsStroke.hashtag,
+                          title: 'Add Workspace',
+                          trailing: Icon(
+                            HugeIconsStroke.arrowRight01,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            openAddWorkspaceFlow(context);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // General Section
+                  _buildSectionHeader('General'),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: activeSettingsPanel == SettingsPanelType.appearance && isDesktop
+                          ? theme.colorScheme.primaryContainer.withAlpha(120)
+                          : theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: activeSettingsPanel == SettingsPanelType.appearance && isDesktop
+                            ? theme.colorScheme.primary.withAlpha(100)
+                            : theme.colorScheme.outlineVariant.withAlpha(80),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingItem(
+                          icon: HugeIconsStroke.settings01,
+                          title: 'Appearance',
+                          trailing: Icon(
+                            HugeIconsStroke.arrowRight01,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            ref
+                                    .read(activeSettingsPanelProvider.notifier)
+                                    .state =
+                                SettingsPanelType.appearance;
+                            if (isDesktop) {
+                              ref
+                                      .read(activeChatSessionProvider.notifier)
+                                      .state =
+                                  const ActiveChatSession();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
                   // Session / Account Section
                   _buildSectionHeader('Account'),
                   Container(
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withAlpha(80),
+                      ),
                     ),
                     child: Column(
                       children: [
@@ -942,39 +909,66 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           right: 16.0,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Theme Mode Preferences'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildThemeCard(
-                  context,
-                  ref,
-                  mode: ThemeMode.light,
-                  label: 'Light Mode',
-                  icon: Icons.light_mode_rounded,
-                  isSelected: currentThemeMode == ThemeMode.light,
+                Text(
+                  "Appearance",
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
-                _buildThemeCard(
-                  context,
-                  ref,
-                  mode: ThemeMode.dark,
-                  label: 'Dark Mode',
-                  icon: Icons.dark_mode_rounded,
-                  isSelected: currentThemeMode == ThemeMode.dark,
-                ),
-                _buildThemeCard(
-                  context,
-                  ref,
-                  mode: ThemeMode.system,
-                  label: 'System Default',
-                  icon: Icons.settings_brightness_rounded,
-                  isSelected: currentThemeMode == ThemeMode.system,
+                const SizedBox(height: 4),
+                Text(
+                  "Customize how HelloAltr displays layout layers on your viewport workspace canvas.",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16.0),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _buildThemeCard(
+                      context,
+                      ref,
+                      mode: ThemeMode.light,
+                      label: 'Light Mode',
+                      icon: HugeIconsSolid.sun01,
+                      isSelected: currentThemeMode == ThemeMode.light,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildThemeCard(
+                      context,
+                      ref,
+                      mode: ThemeMode.dark,
+                      label: 'Dark Mode',
+                      icon: HugeIconsSolid.moon02,
+                      isSelected: currentThemeMode == ThemeMode.dark,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildThemeCard(
+                      context,
+                      ref,
+                      mode: ThemeMode.system,
+                      label: 'System Default',
+                      icon: HugeIconsSolid.darkMode,
+                      isSelected: currentThemeMode == ThemeMode.system,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1010,21 +1004,6 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey.shade500,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
   Widget _buildThemeCard(
     BuildContext context,
     WidgetRef ref, {
@@ -1032,6 +1011,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     required String label,
     required IconData icon,
     required bool isSelected,
+    String? subtitle,
   }) {
     final theme = Theme.of(context);
     return GestureDetector(
@@ -1039,8 +1019,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
         ref.read(themeModeProvider.notifier).setThemeMode(mode);
       },
       child: Container(
-        width: 170,
-        height: 120,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primaryContainer.withAlpha(120)
@@ -1050,47 +1029,42 @@ class AppearanceSettingsPanel extends ConsumerWidget {
             color: isSelected
                 ? theme.colorScheme.primary
                 : theme.colorScheme.outlineVariant.withAlpha(80),
-            width: isSelected ? 2 : 1,
+            width: isSelected ? 2.0 : 1.0,
           ),
         ),
-        child: Stack(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (isSelected)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Icon(
-                  Icons.check_circle,
-                  color: theme.colorScheme.primary,
-                  size: 16,
-                ),
-              ),
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    color: isSelected
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                    size: 32,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: isSelected
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
+            Icon(
+              icon,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+              size: 32,
             ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),
