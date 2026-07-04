@@ -12,6 +12,7 @@ import 'package:chat/providers/auth_provider.dart';
 
 // Pages
 import 'package:chat/pages/onboarding_page.dart';
+import 'package:chat/pages/workspace_onboarding_page.dart';
 import 'package:chat/pages/welcome_page.dart';
 import 'package:chat/pages/splash_page.dart';
 
@@ -52,8 +53,11 @@ class AltrChat extends ConsumerWidget {
           if (altrUser == null) {
             return const WelcomeAuthenticationView();
           }
-          if (!altrUser.onboardingCompleted) {
-            return const OnboardingPage();
+          if (!altrUser.profileOnboardingCompleted) {
+            return const ProfileOnboardingPage();
+          }
+          if (!altrUser.workspaceOnboardingCompleted) {
+            return const WorkspaceOnboardingPage();
           }
           return const LayoutShell();
         },

@@ -6,7 +6,9 @@ class AltrUser {
   final String emailId;
   final List<String> activeWorkspaces;
   final Map<String, String> currentWorkspaces;
-  final bool onboardingCompleted; // Flag for subsequent gateway branching
+  final bool onboardingCompleted; // Legacy / profile fallback
+  final bool profileOnboardingCompleted;
+  final bool workspaceOnboardingCompleted;
 
   AltrUser({
     required this.userId,
@@ -17,6 +19,8 @@ class AltrUser {
     required this.activeWorkspaces,
     required this.currentWorkspaces,
     required this.onboardingCompleted,
+    required this.profileOnboardingCompleted,
+    required this.workspaceOnboardingCompleted,
   });
 
   Map<String, dynamic> toMap() => {
@@ -28,6 +32,8 @@ class AltrUser {
     'active_workspaces': activeWorkspaces,
     'current_workspaces': currentWorkspaces,
     'onboarding_completed': onboardingCompleted,
+    'profile_onboarding_completed': profileOnboardingCompleted,
+    'workspace_onboarding_completed': workspaceOnboardingCompleted,
   };
 
   factory AltrUser.fromMap(Map<String, dynamic> map) => AltrUser(
@@ -39,5 +45,7 @@ class AltrUser {
     activeWorkspaces: List<String>.from(map['active_workspaces'] ?? []),
     currentWorkspaces: Map<String, String>.from(map['current_workspaces'] ?? {}),
     onboardingCompleted: map['onboarding_completed'] ?? false,
+    profileOnboardingCompleted: map['profile_onboarding_completed'] ?? map['onboarding_completed'] ?? false,
+    workspaceOnboardingCompleted: map['workspace_onboarding_completed'] ?? false,
   );
 }

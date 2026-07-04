@@ -9,14 +9,14 @@ import 'package:chat/providers/auth_provider.dart';
 // Values
 import 'package:chat/values.dart';
 
-class OnboardingPage extends ConsumerStatefulWidget {
-  const OnboardingPage({super.key});
+class ProfileOnboardingPage extends ConsumerStatefulWidget {
+  const ProfileOnboardingPage({super.key});
 
   @override
-  ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
+  ConsumerState<ProfileOnboardingPage> createState() => _ProfileOnboardingPageState();
 }
 
-class _OnboardingPageState extends ConsumerState<OnboardingPage> {
+class _ProfileOnboardingPageState extends ConsumerState<ProfileOnboardingPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _displayNameController;
   late TextEditingController _userNameController;
@@ -59,6 +59,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           'display_name': _displayNameController.text.trim(),
           'user_name': _userNameController.text.trim().toLowerCase(),
           'onboarding_completed': true,
+          'profile_onboarding_completed': true,
         });
         ref.invalidate(userProfileProvider);
       }

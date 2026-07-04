@@ -44,6 +44,8 @@ class UserRepository {
           'active_workspaces': <String>[],
           'current_workspaces': {deviceId: ""},
           'onboarding_completed': false,
+          'profile_onboarding_completed': false,
+          'workspace_onboarding_completed': false,
         });
       }
     });
