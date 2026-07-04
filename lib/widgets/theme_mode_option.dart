@@ -13,6 +13,7 @@ class ThemeModeOption extends ConsumerWidget {
   final String label;
   final bool isSelected;
   final Color selectedColor;
+  final bool isMobile;
 
   const ThemeModeOption({
     super.key,
@@ -20,6 +21,7 @@ class ThemeModeOption extends ConsumerWidget {
     required this.label,
     required this.isSelected,
     required this.selectedColor,
+    required this.isMobile,
   });
 
   @override
@@ -37,6 +39,7 @@ class ThemeModeOption extends ConsumerWidget {
             mode: mode,
             isSelected: isSelected,
             selectedColor: selectedColor,
+            isMobile: isMobile,
           ),
           const SizedBox(height: 8),
           Text(

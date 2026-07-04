@@ -8,20 +8,22 @@ class ThemePreview extends StatelessWidget {
   final ThemeMode mode;
   final bool isSelected;
   final Color selectedColor;
+  final bool isMobile;
 
   const ThemePreview({
     super.key,
     required this.mode,
     required this.isSelected,
     required this.selectedColor,
+    required this.isMobile,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: 120,
-      height: 72,
+      width: isMobile ? 120 : 120,
+      height: isMobile ? 220 : 72,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
@@ -41,6 +43,7 @@ class ThemePreview extends StatelessWidget {
                       isDark: false,
                       isSplit: true,
                       selectedColor: selectedColor,
+                      isMobile: isMobile,
                     ),
                   ),
                   Expanded(
@@ -48,6 +51,7 @@ class ThemePreview extends StatelessWidget {
                       isDark: true,
                       isSplit: true,
                       selectedColor: selectedColor,
+                      isMobile: isMobile,
                     ),
                   ),
                 ],
@@ -56,6 +60,7 @@ class ThemePreview extends StatelessWidget {
                 isDark: mode == ThemeMode.dark,
                 isSplit: false,
                 selectedColor: selectedColor,
+                isMobile: isMobile,
               ),
       ),
     );

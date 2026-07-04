@@ -1,8 +1,11 @@
 // Packages
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:window_manager/window_manager.dart';
 
 // Layout Shell
 import 'package:chat/layout_shell.dart';
@@ -19,12 +22,27 @@ import 'package:chat/pages/splash_page.dart';
 
 // Theme & Utils
 import 'package:chat/theme/app_theme.dart'; 
+import 'package:chat/values.dart';
 
 // Firebase
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    await windowManager.ensureInitialized();
+
+    WindowOptions windowOptions = const WindowOptions(
+      minimumSize: kMinWindowSize,
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); 
   final prefs = await SharedPreferences.getInstance();
   runApp(ProviderScope(

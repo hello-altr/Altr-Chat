@@ -8,8 +8,8 @@ import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 
 // Widgets
-import 'package:chat/widgets/theme_mode_option.dart';
 import 'package:chat/widgets/theme_color_option.dart';
+import 'package:chat/widgets/theme_mode_option.dart';
 
 // Enums
 import 'package:chat/enums/layout_mode.dart';
@@ -33,6 +33,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           label: 'Auto',
           isSelected: currentThemeMode == ThemeMode.system,
           selectedColor: selectedColor,
+          isMobile: isMobile,
         ),
         const SizedBox(width: 16),
         ThemeModeOption(
@@ -40,6 +41,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           label: 'Light',
           isSelected: currentThemeMode == ThemeMode.light,
           selectedColor: selectedColor,
+          isMobile: isMobile,
         ),
         const SizedBox(width: 16),
         ThemeModeOption(
@@ -47,6 +49,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           label: 'Dark',
           isSelected: currentThemeMode == ThemeMode.dark,
           selectedColor: selectedColor,
+          isMobile: isMobile,
         ),
       ],
     );
@@ -56,13 +59,6 @@ class AppearanceSettingsPanel extends ConsumerWidget {
       appearanceContent = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Theme Mode',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
           Center(child: themeSelectionRow),
         ],
       );
@@ -128,22 +124,61 @@ class AppearanceSettingsPanel extends ConsumerWidget {
       ],
     );
 
+    Widget colorSelectionWrap = Wrap(
+      spacing: 14.0,
+      runSpacing: 14.0,
+      children: [
+        ThemeColorOptionItem(
+          color: const Color(0xff096b5a),
+          label: "Default",
+          isSelected: selectedColor == const Color(0xff096b5a),
+        ),
+        ThemeColorOptionItem(
+          color: const Color(0xFF007AFF),
+          label: "",
+          isSelected: selectedColor == const Color(0xFF007AFF),
+        ),
+        ThemeColorOptionItem(
+          color: const Color(0xFF8E44AD),
+          label: "",
+          isSelected: selectedColor == const Color(0xFF8E44AD),
+        ),
+        ThemeColorOptionItem(
+          color: const Color(0xFFFF3B30),
+          label: "",
+          isSelected: selectedColor == const Color(0xFFFF3B30),
+        ),
+        ThemeColorOptionItem(
+          color: const Color(0xFFFF9500),
+          label: "",
+          isSelected: selectedColor == const Color(0xFFFF9500),
+        ),
+        ThemeColorOptionItem(
+          color: const Color(0xFFFFCC00),
+          label: "",
+          isSelected: selectedColor == const Color(0xFFFFCC00),
+        ),
+        ThemeColorOptionItem(
+          color: const Color(0xFF34C759),
+          label: "",
+          isSelected: selectedColor == const Color(0xFF34C759),
+        ),
+      ],
+    );
+
     Widget themeContent;
     if (isMobile) {
       themeContent = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Color',
+            'Accent Color',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: colorSelectionRow,
-          ),
+          colorSelectionWrap,
         ],
       );
     } else {
@@ -151,7 +186,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Color',
+            'Accent Color',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),

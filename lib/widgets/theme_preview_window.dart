@@ -5,21 +5,15 @@ class ThemePreviewWindow extends StatelessWidget {
   final bool isDark;
   final bool isSplit;
   final Color selectedColor;
+  final bool isMobile;
 
   const ThemePreviewWindow({
     super.key,
     required this.isDark,
     required this.isSplit,
     required this.selectedColor,
+    required this.isMobile,
   });
-
-  Widget _buildDot(Color color) {
-    return Container(
-      width: 3,
-      height: 3,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,18 +95,165 @@ class ThemePreviewWindow extends StatelessWidget {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.only(left: 3, top: 3),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Red, Yellow, Green window dots
-                  _buildDot(const Color(0xFFFF5F56)),
-                  const SizedBox(width: 2),
-                  _buildDot(const Color(0xFFFFBD2E)),
-                  const SizedBox(width: 2),
-                  _buildDot(const Color(0xFF27C93F)),
-                ],
-              ),
+              padding: isMobile
+                  ? const EdgeInsets.symmetric(horizontal: 4, vertical: 6)
+                  : const EdgeInsets.only(left: 3, top: 3, right: 3),
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Bubble 1 (left)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: isSplit ? 20 : 36,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF334155)
+                                  : const Color(0xFFE2E8F0),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(2),
+                                topRight: Radius.circular(2),
+                                bottomRight: Radius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        // Bubble 2 (right - themed)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            width: isSplit ? 26 : 48,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: selectedColor,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(2),
+                                topRight: Radius.circular(2),
+                                bottomLeft: Radius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        // Bubble 3 (left)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: isSplit ? 30 : 54,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF334155)
+                                  : const Color(0xFFE2E8F0),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(2),
+                                topRight: Radius.circular(2),
+                                bottomRight: Radius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        // Bubble 4 (right - themed)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            width: isSplit ? 22 : 40,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: selectedColor,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(2),
+                                topRight: Radius.circular(2),
+                                bottomLeft: Radius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        // Bubble 5 (left)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: isSplit ? 16 : 30,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF334155)
+                                  : const Color(0xFFE2E8F0),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(2),
+                                topRight: Radius.circular(2),
+                                bottomRight: Radius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Simulated horizontal navigation sidebar
+                        Container(
+                          width: isSplit ? 14 : 20,
+                          margin: const EdgeInsets.only(right: 3),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (int i = 0; i < 3; i++) ...[
+                                Container(
+                                  width: isSplit ? 8 : 14,
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF334155)
+                                        : const Color(0xFFCBD5E1),
+                                    borderRadius: BorderRadius.circular(1),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                              ],
+                            ],
+                          ),
+                        ),
+                        // Divider line
+                        Container(
+                          width: 0.5,
+                          height: 30, // Limit height to avoid overflow/bleeding
+                          color: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
+                        ),
+                        const SizedBox(width: 3),
+                        // Messaging feeds panel blocks
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (int i = 0; i < 3; i++) ...[
+                                Container(
+                                  width: isSplit
+                                      ? (i % 2 == 0 ? 12.0 : 18.0)
+                                      : (i % 2 == 0 ? 24.0 : 36.0),
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF334155)
+                                        : const Color(0xFFCBD5E1),
+                                    borderRadius: BorderRadius.circular(1),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],
