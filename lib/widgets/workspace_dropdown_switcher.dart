@@ -7,10 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/providers/auth_provider.dart';
 
 // Services
+import 'package:chat/services/add_workspace_flow.dart';
 import 'package:chat/services/device_service.dart';
-
-// Widgets
-import 'package:chat/widgets/workspace_flow_canvas.dart';
 
 class WorkspaceDropdownSwitcher extends ConsumerWidget {
   const WorkspaceDropdownSwitcher({super.key});

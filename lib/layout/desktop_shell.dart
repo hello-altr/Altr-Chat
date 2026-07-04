@@ -15,8 +15,10 @@ import 'package:chat/widgets/empty_state.dart';
 
 // Pages
 import 'package:chat/pages/shared_chat_canvas.dart';
-import 'package:chat/pages/settings_page.dart';
+import 'package:chat/pages/appearance_page.dart';
 import 'package:chat/pages/channels_page.dart';
+import 'package:chat/pages/settings_page.dart';
+import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
 
 class DesktopShell extends ConsumerStatefulWidget {
