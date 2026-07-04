@@ -1,4 +1,5 @@
 // Packages
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:material_ui/material_ui.dart';
@@ -17,8 +18,7 @@ import 'package:chat/pages/welcome_page.dart';
 import 'package:chat/pages/splash_page.dart';
 
 // Theme & Utils
-import 'package:chat/theme/theme.dart';
-import 'package:chat/utils/util.dart';
+import 'package:chat/theme/app_theme.dart'; 
 
 // Firebase
 import 'firebase_options.dart';
@@ -26,7 +26,13 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); 
-  runApp(const ProviderScope(child: AltrChat()));
+  final prefs = await SharedPreferences.getInstance();
+  runApp(ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ],
+    child: const AltrChat(),
+  ));
 }
 
 final splashDelayProvider = FutureProvider<void>((ref) async {
@@ -38,11 +44,9 @@ class AltrChat extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    TextTheme textTheme = createTextTheme(context, "Inter", "Montserrat");
-    MaterialTheme theme = MaterialTheme(textTheme);
-    final appearance = ref.watch(appearanceProvider);
-    final currentThemeMode = appearance.themeMode;
-    final accentSeedColor = appearance.accentSeedColor;
+    final appearanceState = ref.watch(appearanceProvider);
+    final currentThemeMode = appearanceState.themeMode;
+    final accentSeedColor = appearanceState.accentSeedColor;
     final deviceIdAsync = ref.watch(deviceIdProvider);
     final userProfile = ref.watch(userProfileProvider);
     final splashDelay = ref.watch(splashDelayProvider);
@@ -76,8 +80,8 @@ class AltrChat extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: homeScreen,
-      theme: theme.light(accentSeedColor),
-      darkTheme: theme.dark(accentSeedColor),
+      theme: AltrTheme.buildTheme(ThemeMode.light, accentSeedColor),
+      darkTheme: AltrTheme.buildTheme(ThemeMode.dark, accentSeedColor),
       themeMode: currentThemeMode,
     );
   }

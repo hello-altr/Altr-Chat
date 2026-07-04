@@ -11,12 +11,19 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AppearanceNotifier Tests', () {
-    setUp(() {
+    late SharedPreferences prefs;
+
+    setUp(() async {
       SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
     });
 
     test('Initial appearance state uses defaults', () {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
       addTearDown(container.dispose);
 
       final state = container.read(appearanceProvider);
@@ -25,7 +32,11 @@ void main() {
     });
 
     test('updateThemeMode updates state and persists', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
       addTearDown(container.dispose);
 
       final notifier = container.read(appearanceProvider.notifier);
@@ -33,12 +44,15 @@ void main() {
       notifier.updateThemeMode(ThemeMode.dark);
       expect(container.read(appearanceProvider).themeMode, ThemeMode.dark);
 
-      final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('altr_theme_mode'), 'dark');
     });
 
     test('updateAccentColor updates state and persists', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
       addTearDown(container.dispose);
 
       final notifier = container.read(appearanceProvider.notifier);
@@ -46,28 +60,25 @@ void main() {
       notifier.updateAccentColor(Colors.red);
       expect(container.read(appearanceProvider).accentSeedColor, Colors.red);
 
-      final prefs = await SharedPreferences.getInstance();
       // ignore: deprecated_member_use
       expect(prefs.getString('altr_accent_seed'), Colors.red.value.toRadixString(16));
     });
 
     test('AppearanceNotifier restores saved state on reconstruction', () async {
-      final prefs = await SharedPreferences.getInstance();
       await prefs.setString('altr_theme_mode', 'dark');
       // ignore: deprecated_member_use
       await prefs.setString('altr_accent_seed', Colors.red.value.toRadixString(16));
 
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
       addTearDown(container.dispose);
-
-      // Trigger initial build
-      container.read(appearanceProvider);
-
-      // Wait for _loadFromPrefs asynchronous execution to finish
-      await Future.delayed(const Duration(milliseconds: 50));
 
       final finalState = container.read(appearanceProvider);
       expect(finalState.themeMode, ThemeMode.dark);
+      // ignore: deprecated_member_use
       expect(finalState.accentSeedColor.value, Colors.red.value);
     });
   });

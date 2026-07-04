@@ -1,8 +1,10 @@
 // Packages
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Providers
+import 'package:chat/providers/appearance_notifier.dart';
 import 'package:chat/providers/auth_provider.dart';
 
 // Models
@@ -26,6 +28,9 @@ void main() {
       workspaceOnboardingCompleted: true,
     );
 
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
     // Build our app under a ProviderScope with overrides and trigger a frame.
     await tester.pumpWidget(
       ProviderScope(
@@ -33,6 +38,7 @@ void main() {
           userProfileProvider.overrideWith((ref) => mockUser),
           splashDelayProvider.overrideWith((ref) => null),
           deviceIdProvider.overrideWith((ref) => 'test_device'),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const AltrChat(),
       ),
