@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1085731614579-76aieni8lhrs7sol4ijasn5v8ocgsb0a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hello.altr.chat",
+            "certificate_hash": "488840e823b9441527abffe3755520308816f9bf"
+          }
+        },
+        {
           "client_id": "1085731614579-8da3in5pd6rbtefa256c6jgrgc7djdhd.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "1085731614579-8da3in5pd6rbtefa256c6jgrgc7djdhd.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1085731614579-7o5itj8fbh0h7prujtt4suvqsl6latg4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "hello.altr.chat"
+              }
             }
           ]
         }
