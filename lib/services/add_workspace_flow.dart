@@ -2,7 +2,7 @@
 import 'package:material_ui/material_ui.dart';
 
 // Widgets
-import 'package:chat/widgets/workspace_flow_canvas.dart';
+import 'package:chat/widgets/onboarding/workspace_flow_canvas.dart';
 
 // Enums
 import 'package:chat/enums/onboarding_enums.dart';

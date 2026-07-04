@@ -2,57 +2,70 @@
 import 'package:material_ui/material_ui.dart';
 
 // Widgets
-import 'package:chat/widgets/workspace_flow_canvas.dart';
+import 'package:chat/widgets/onboarding/workspace_flow_canvas.dart';
 
-// Enums & Values
+// Enums
 import 'package:chat/enums/onboarding_enums.dart';
 
-class WorkspaceOnboardingPage extends StatelessWidget {
-  const WorkspaceOnboardingPage({super.key});
+class WorkspaceOnboardingPage extends StatefulWidget {
+  final WorkspaceFlowContext contextType;
+  final VoidCallback? onCompleted;
+
+  const WorkspaceOnboardingPage({
+    super.key,
+    this.contextType = WorkspaceFlowContext.appStart,
+    this.onCompleted,
+  });
 
   @override
+  State<WorkspaceOnboardingPage> createState() => _WorkspaceOnboardingPageState();
+}
+
+class _WorkspaceOnboardingPageState extends State<WorkspaceOnboardingPage> {
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isMobile = constraints.maxWidth < 840;
-          if (isMobile) {
-            return PopScope(
-              canPop: false,
-              onPopInvokedWithResult: (didPop, result) {
-                // Intercept back action to prevent dropping context
-              },
-              child: const WorkspaceFlowCanvas(
-                contextType: WorkspaceFlowContext.appStart,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 840) {
+          // Mobile Structural Presentation Shell
+          return Scaffold(
+            body: PopScope(
+              canPop: widget.contextType == WorkspaceFlowContext.settingsHub, // Intercepts hardware back gestures at appStart
+              child: WorkspaceFlowCanvas(
+                contextType: widget.contextType,
+                onCompleted: widget.onCompleted,
               ),
-            );
-          } else {
-            final theme = Theme.of(context);
-            return Scaffold(
-              backgroundColor: theme.colorScheme.surface,
-              body: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: 680,
-                    maxHeight: 600,
-                  ),
-                  child: Card(
-                    elevation: 12,
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    color: theme.colorScheme.surfaceContainer,
-                    child: const WorkspaceFlowCanvas(
-                      contextType: WorkspaceFlowContext.appStart,
+            ),
+          );
+        } else {
+          // Desktop Structural Presentation Shell
+          return Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            body: Stack(
+              children: [
+                // Translucent backdrop scrim layer mask blocking background interactions
+                ModalBarrier(
+                  // ignore: deprecated_member_use
+                  color: Colors.black.withOpacity(0.45),
+                  dismissible: false,
+                ),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680, maxHeight: 600),
+                    child: Card(
+                      clipBehavior: Clip.antiAlias, // Explicit anti-aliasing clipping mask boundary
+                      child: WorkspaceFlowCanvas(
+                        contextType: widget.contextType,
+                        onCompleted: widget.onCompleted,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          }
-        },
-      ),
+              ],
+            ),
+          );
+        }
+      },
     );
   }
 }
