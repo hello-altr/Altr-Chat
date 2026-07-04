@@ -41,6 +41,7 @@ class AltrChat extends ConsumerWidget {
     TextTheme textTheme = createTextTheme(context, "Inter", "Montserrat");
     MaterialTheme theme = MaterialTheme(textTheme);
     final currentThemeMode = ref.watch(themeModeProvider);
+    final selectedColorOption = ref.watch(themeColorOptionProvider);
     final userProfile = ref.watch(userProfileProvider);
     final splashDelay = ref.watch(splashDelayProvider);
 
@@ -70,8 +71,8 @@ class AltrChat extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: homeScreen,
-      theme: theme.light(),
-      darkTheme: theme.dark(),
+      theme: theme.light(selectedColorOption),
+      darkTheme: theme.dark(selectedColorOption),
       themeMode: currentThemeMode,
     );
   }

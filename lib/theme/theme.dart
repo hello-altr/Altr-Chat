@@ -1,4 +1,8 @@
-import "package:flutter/material.dart";
+// Packages
+import "package:material_ui/material_ui.dart";
+
+// Providers
+import "package:chat/providers/theme_provider.dart";
 
 class MaterialTheme {
   final TextTheme textTheme;
@@ -56,8 +60,33 @@ class MaterialTheme {
     );
   }
 
-  ThemeData light() {
-    return theme(lightScheme());
+  static Color getSeedColor(ThemeColorOption option) {
+    switch (option) {
+      case ThemeColorOption.defaultColor:
+        return const Color(0xff096b5a);
+      case ThemeColorOption.blue:
+        return const Color(0xFF007AFF);
+      case ThemeColorOption.purple:
+        return const Color(0xFF8E44AD);
+      case ThemeColorOption.red:
+        return const Color(0xFFFF3B30);
+      case ThemeColorOption.orange:
+        return const Color(0xFFFF9500);
+      case ThemeColorOption.yellow:
+        return const Color(0xFFFFCC00);
+      case ThemeColorOption.green:
+        return const Color(0xFF34C759);
+    }
+  }
+
+  ThemeData light(ThemeColorOption option) {
+    if (option == ThemeColorOption.defaultColor) {
+      return theme(lightScheme());
+    }
+    return theme(ColorScheme.fromSeed(
+      seedColor: getSeedColor(option),
+      brightness: Brightness.light,
+    ));
   }
 
   static ColorScheme lightMediumContrastScheme() {
@@ -221,8 +250,14 @@ class MaterialTheme {
     );
   }
 
-  ThemeData dark() {
-    return theme(darkScheme());
+  ThemeData dark(ThemeColorOption option) {
+    if (option == ThemeColorOption.defaultColor) {
+      return theme(darkScheme());
+    }
+    return theme(ColorScheme.fromSeed(
+      seedColor: getSeedColor(option),
+      brightness: Brightness.dark,
+    ));
   }
 
   static ColorScheme darkMediumContrastScheme() {

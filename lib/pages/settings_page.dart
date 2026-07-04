@@ -20,6 +20,7 @@ import 'package:chat/widgets/empty_state.dart';
 
 // Enums & Dummy Data
 import 'package:chat/enums/layout_mode.dart';
+import 'package:chat/theme/theme.dart';
 import 'package:chat/dummy_data.dart';
 
 // Component 1: SettingsIndexHub (Column 1 on Desktop / Segment on Mobile)
@@ -898,6 +899,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     final theme = Theme.of(context);
     final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
     final currentThemeMode = ref.watch(themeModeProvider);
+    final selectedColor = ref.watch(themeColorOptionProvider);
 
     Widget themeSelectionRow = Row(
       mainAxisSize: MainAxisSize.min,
@@ -908,6 +910,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           mode: ThemeMode.system,
           label: 'Auto',
           isSelected: currentThemeMode == ThemeMode.system,
+          selectedColor: selectedColor,
         ),
         const SizedBox(width: 16),
         _buildThemeOption(
@@ -916,6 +919,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           mode: ThemeMode.light,
           label: 'Light',
           isSelected: currentThemeMode == ThemeMode.light,
+          selectedColor: selectedColor,
         ),
         const SizedBox(width: 16),
         _buildThemeOption(
@@ -924,6 +928,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           mode: ThemeMode.dark,
           label: 'Dark',
           isSelected: currentThemeMode == ThemeMode.dark,
+          selectedColor: selectedColor,
         ),
       ],
     );
@@ -934,7 +939,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Appearance',
+            'Theme Mode',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -948,12 +953,64 @@ class AppearanceSettingsPanel extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Appearance',
+            'Theme Mode',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
           themeSelectionRow,
+        ],
+      );
+    }
+
+    Widget colorSelectionRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildColorOptionItem(context, ref, ThemeColorOption.defaultColor, const Color(0xff096b5a), "Default", selectedColor == ThemeColorOption.defaultColor),
+        const SizedBox(width: 10),
+        _buildColorOptionItem(context, ref, ThemeColorOption.blue, const Color(0xFF007AFF), "", selectedColor == ThemeColorOption.blue),
+        const SizedBox(width: 10),
+        _buildColorOptionItem(context, ref, ThemeColorOption.purple, const Color(0xFF8E44AD), "", selectedColor == ThemeColorOption.purple),
+        const SizedBox(width: 10),
+        _buildColorOptionItem(context, ref, ThemeColorOption.red, const Color(0xFFFF3B30), "", selectedColor == ThemeColorOption.red),
+        const SizedBox(width: 10),
+        _buildColorOptionItem(context, ref, ThemeColorOption.orange, const Color(0xFFFF9500), "", selectedColor == ThemeColorOption.orange),
+        const SizedBox(width: 10),
+        _buildColorOptionItem(context, ref, ThemeColorOption.yellow, const Color(0xFFFFCC00), "", selectedColor == ThemeColorOption.yellow),
+        const SizedBox(width: 10),
+        _buildColorOptionItem(context, ref, ThemeColorOption.green, const Color(0xFF34C759), "", selectedColor == ThemeColorOption.green),
+      ],
+    );
+
+    Widget themeContent;
+    if (isMobile) {
+      themeContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Color',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: colorSelectionRow,
+          ),
+        ],
+      );
+    } else {
+      themeContent = Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Color',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          colorSelectionRow,
         ],
       );
     }
@@ -999,7 +1056,17 @@ class AppearanceSettingsPanel extends ConsumerWidget {
                   color: theme.colorScheme.outlineVariant.withAlpha(80),
                 ),
               ),
-              child: appearanceContent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  appearanceContent,
+                  Divider(
+                    height: 32,
+                    color: theme.colorScheme.outlineVariant.withAlpha(80),
+                  ),
+                  themeContent,
+                ],
+              ),
             ),
           ],
         ),
@@ -1041,6 +1108,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     required ThemeMode mode,
     required String label,
     required bool isSelected,
+    required ThemeColorOption selectedColor,
   }) {
     final theme = Theme.of(context);
     return GestureDetector(
@@ -1055,6 +1123,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
             context,
             mode: mode,
             isSelected: isSelected,
+            selectedColor: selectedColor,
           ),
           const SizedBox(height: 8),
           Text(
@@ -1071,10 +1140,61 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     );
   }
 
+  Widget _buildColorOptionItem(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeColorOption option,
+    Color color,
+    String label,
+    bool isSelected,
+  ) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () {
+        ref.read(themeColorOptionProvider.notifier).setThemeColor(option);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: isSelected
+                  ? Border.all(color: theme.colorScheme.primary, width: 2.0)
+                  : null,
+            ),
+            padding: const EdgeInsets.all(2),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: 9,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : (label.isEmpty ? Colors.transparent : theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildThemePreview(
     BuildContext context, {
     required ThemeMode mode,
     required bool isSelected,
+    required ThemeColorOption selectedColor,
   }) {
     final theme = Theme.of(context);
     return Container(
@@ -1094,11 +1214,11 @@ class AppearanceSettingsPanel extends ConsumerWidget {
         child: mode == ThemeMode.system
             ? Row(
                 children: [
-                  Expanded(child: _buildWindowContent(context, isDark: false, isSplit: true)),
-                  Expanded(child: _buildWindowContent(context, isDark: true, isSplit: true)),
+                  Expanded(child: _buildWindowContent(context, isDark: false, isSplit: true, selectedColor: selectedColor)),
+                  Expanded(child: _buildWindowContent(context, isDark: true, isSplit: true, selectedColor: selectedColor)),
                 ],
               )
-            : _buildWindowContent(context, isDark: mode == ThemeMode.dark, isSplit: false),
+            : _buildWindowContent(context, isDark: mode == ThemeMode.dark, isSplit: false, selectedColor: selectedColor),
       ),
     );
   }
@@ -1107,24 +1227,28 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     BuildContext context, {
     required bool isDark,
     required bool isSplit,
+    required ThemeColorOption selectedColor,
   }) {
-    final lightWallpaper = const LinearGradient(
+    final seedColor = MaterialTheme.getSeedColor(selectedColor);
+    final hsl = HSLColor.fromColor(seedColor);
+
+    final lightWallpaper = LinearGradient(
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
       colors: [
-        Color(0xFFE2F1FF),
-        Color(0xFF89C6FF),
-        Color(0xFF3B82F6),
+        hsl.withLightness(0.92).withSaturation(0.85).toColor(),
+        hsl.withLightness(0.72).withSaturation(0.90).toColor(),
+        hsl.withLightness(0.48).withSaturation(0.90).toColor(),
       ],
     );
 
-    final darkWallpaper = const LinearGradient(
+    final darkWallpaper = LinearGradient(
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
       colors: [
-        Color(0xFF1E1E38),
-        Color(0xFF3B3B75),
-        Color(0xFF1D4ED8),
+        hsl.withLightness(0.22).withSaturation(0.45).toColor(),
+        hsl.withLightness(0.12).withSaturation(0.55).toColor(),
+        hsl.withLightness(0.06).withSaturation(0.65).toColor(),
       ],
     );
 
@@ -1193,10 +1317,8 @@ class AppearanceSettingsPanel extends ConsumerWidget {
                   _buildDot(const Color(0xFFFF5F56)),
                   const SizedBox(width: 2),
                   _buildDot(const Color(0xFFFFBD2E)),
-                  if (!isSplit) ...[
-                    const SizedBox(width: 2),
-                    _buildDot(const Color(0xFF27C93F)),
-                  ],
+                  const SizedBox(width: 2),
+                  _buildDot(const Color(0xFF27C93F)),
                 ],
               ),
             ),
