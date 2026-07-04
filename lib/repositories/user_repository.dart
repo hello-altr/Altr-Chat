@@ -5,8 +5,40 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Services
 import 'package:chat/services/device_service.dart';
 
+class HandleAlreadyTakenException implements Exception {
+  final String message;
+  HandleAlreadyTakenException([this.message = 'Username handle is already taken.']);
+
+  @override
+  String toString() => 'HandleAlreadyTakenException: $message';
+}
+
 class UserRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> reserveUsername({
+    required String authenticatedUid,
+    required String requestedHandle,
+  }) async {
+    final handleRef = _firestore.collection('handles').doc(requestedHandle.toLowerCase());
+    final userProfileRef = _firestore.collection('users').doc(authenticatedUid);
+
+    await _firestore.runTransaction((transaction) async {
+      final handleDoc = await transaction.get(handleRef);
+      if (handleDoc.exists) {
+        throw HandleAlreadyTakenException();
+      }
+
+      transaction.set(handleRef, {
+        'user_id': authenticatedUid,
+        'assigned_at': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(userProfileRef, {
+        'user_name': requestedHandle,
+      });
+    });
+  }
 
   Future<void> syncGoogleUserToFirestore(User firebaseAuthUser) async {
     final deviceId = await DeviceService.getDeviceId();
@@ -51,3 +83,4 @@ class UserRepository {
     });
   }
 }
+

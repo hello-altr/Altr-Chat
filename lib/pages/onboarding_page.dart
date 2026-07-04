@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 // Providers
 import 'package:chat/providers/auth_provider.dart';
+import 'package:chat/repositories/user_repository.dart';
 
 // Values
 import 'package:chat/values.dart';
@@ -55,16 +56,32 @@ class _ProfileOnboardingPageState extends ConsumerState<ProfileOnboardingPage> {
     try {
       final user = ref.read(authStateProvider).value;
       if (user != null) {
+        final requestedHandle = _userNameController.text.trim().toLowerCase();
+        final displayName = _displayNameController.text.trim();
+
+        final userRepository = UserRepository();
+        await userRepository.reserveUsername(
+          authenticatedUid: user.uid,
+          requestedHandle: requestedHandle,
+        );
+
         await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-          'display_name': _displayNameController.text.trim(),
-          'user_name': _userNameController.text.trim().toLowerCase(),
+          'display_name': displayName,
           'onboarding_completed': true,
           'profile_onboarding_completed': true,
         });
         ref.invalidate(userProfileProvider);
       }
+    } on HandleAlreadyTakenException catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Username is already taken. Please try another one."),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     } catch (e) {
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

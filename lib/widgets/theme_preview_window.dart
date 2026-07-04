@@ -1,16 +1,10 @@
 // Packages
 import 'package:material_ui/material_ui.dart';
 
-// Providers
-import 'package:chat/providers/theme_provider.dart';
-
-// Theme
-import 'package:chat/theme/theme.dart';
-
 class ThemePreviewWindow extends StatelessWidget {
   final bool isDark;
   final bool isSplit;
-  final ThemeColorOption selectedColor;
+  final Color selectedColor;
 
   const ThemePreviewWindow({
     super.key,
@@ -29,7 +23,7 @@ class ThemePreviewWindow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seedColor = MaterialTheme.getSeedColor(selectedColor);
+    final seedColor = selectedColor;
     final hsl = HSLColor.fromColor(seedColor);
 
     final lightWallpaper = LinearGradient(

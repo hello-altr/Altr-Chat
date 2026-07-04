@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
-import 'package:chat/providers/layout_provider.dart';
-import 'package:chat/providers/theme_provider.dart';
+import 'package:chat/providers/appearance_notifier.dart';
 import 'package:chat/providers/settings_provider.dart';
+import 'package:chat/providers/layout_provider.dart';
 
 // Widgets
 import 'package:chat/widgets/theme_mode_option.dart';
@@ -21,8 +21,9 @@ class AppearanceSettingsPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
-    final currentThemeMode = ref.watch(themeModeProvider);
-    final selectedColor = ref.watch(themeColorOptionProvider);
+    final appearance = ref.watch(appearanceProvider);
+    final currentThemeMode = appearance.themeMode;
+    final selectedColor = appearance.accentSeedColor;
 
     Widget themeSelectionRow = Row(
       mainAxisSize: MainAxisSize.min,
@@ -84,52 +85,45 @@ class AppearanceSettingsPanel extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         ThemeColorOptionItem(
-          option: ThemeColorOption.defaultColor,
           color: const Color(0xff096b5a),
           label: "Default",
-          isSelected: selectedColor == ThemeColorOption.defaultColor,
+          isSelected: selectedColor == const Color(0xff096b5a),
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
-          option: ThemeColorOption.blue,
           color: const Color(0xFF007AFF),
           label: "",
-          isSelected: selectedColor == ThemeColorOption.blue,
+          isSelected: selectedColor == const Color(0xFF007AFF),
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
-          option: ThemeColorOption.purple,
           color: const Color(0xFF8E44AD),
           label: "",
-          isSelected: selectedColor == ThemeColorOption.purple,
+          isSelected: selectedColor == const Color(0xFF8E44AD),
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
-          option: ThemeColorOption.red,
           color: const Color(0xFFFF3B30),
           label: "",
-          isSelected: selectedColor == ThemeColorOption.red,
+          isSelected: selectedColor == const Color(0xFFFF3B30),
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
-          option: ThemeColorOption.orange,
           color: const Color(0xFFFF9500),
           label: "",
-          isSelected: selectedColor == ThemeColorOption.orange,
+          isSelected: selectedColor == const Color(0xFFFF9500),
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
-          option: ThemeColorOption.yellow,
           color: const Color(0xFFFFCC00),
           label: "",
-          isSelected: selectedColor == ThemeColorOption.yellow,
+          isSelected: selectedColor == const Color(0xFFFFCC00),
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
-          option: ThemeColorOption.green,
           color: const Color(0xFF34C759),
           label: "",
-          isSelected: selectedColor == ThemeColorOption.green,
+          isSelected: selectedColor == const Color(0xFF34C759),
         ),
       ],
     );

@@ -3,17 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
-import 'package:chat/providers/theme_provider.dart';
+import 'package:chat/providers/appearance_notifier.dart';
 
 class ThemeColorOptionItem extends ConsumerWidget {
-  final ThemeColorOption option;
   final Color color;
   final String label;
   final bool isSelected;
 
   const ThemeColorOptionItem({
     super.key,
-    required this.option,
     required this.color,
     required this.label,
     required this.isSelected,
@@ -24,7 +22,7 @@ class ThemeColorOptionItem extends ConsumerWidget {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
-        ref.read(themeColorOptionProvider.notifier).setThemeColor(option);
+        ref.read(appearanceProvider.notifier).updateAccentColor(color);
       },
       behavior: HitTestBehavior.opaque,
       child: Column(

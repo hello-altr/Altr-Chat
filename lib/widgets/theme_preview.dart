@@ -4,13 +4,10 @@ import 'package:material_ui/material_ui.dart';
 // Widgets
 import 'package:chat/widgets/theme_preview_window.dart';
 
-// Providers
-import 'package:chat/providers/theme_provider.dart';
-
 class ThemePreview extends StatelessWidget {
   final ThemeMode mode;
   final bool isSelected;
-  final ThemeColorOption selectedColor;
+  final Color selectedColor;
 
   const ThemePreview({
     super.key,

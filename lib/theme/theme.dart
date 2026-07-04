@@ -79,12 +79,12 @@ class MaterialTheme {
     }
   }
 
-  ThemeData light(ThemeColorOption option) {
-    if (option == ThemeColorOption.defaultColor) {
+  ThemeData light(Color seedColor) {
+    if (seedColor == const Color(0xff096b5a)) {
       return theme(lightScheme());
     }
     return theme(ColorScheme.fromSeed(
-      seedColor: getSeedColor(option),
+      seedColor: seedColor,
       brightness: Brightness.light,
     ));
   }
@@ -250,12 +250,12 @@ class MaterialTheme {
     );
   }
 
-  ThemeData dark(ThemeColorOption option) {
-    if (option == ThemeColorOption.defaultColor) {
+  ThemeData dark(Color seedColor) {
+    if (seedColor == const Color(0xff096b5a)) {
       return theme(darkScheme());
     }
     return theme(ColorScheme.fromSeed(
-      seedColor: getSeedColor(option),
+      seedColor: seedColor,
       brightness: Brightness.dark,
     ));
   }

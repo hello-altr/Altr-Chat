@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/layout_shell.dart';
 
 // Providers
-import 'package:chat/providers/theme_provider.dart';
+import 'package:chat/providers/appearance_notifier.dart';
 import 'package:chat/providers/auth_provider.dart';
 
 // Pages
@@ -40,15 +40,18 @@ class AltrChat extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     TextTheme textTheme = createTextTheme(context, "Inter", "Montserrat");
     MaterialTheme theme = MaterialTheme(textTheme);
-    final currentThemeMode = ref.watch(themeModeProvider);
-    final selectedColorOption = ref.watch(themeColorOptionProvider);
+    final appearance = ref.watch(appearanceProvider);
+    final currentThemeMode = appearance.themeMode;
+    final accentSeedColor = appearance.accentSeedColor;
+    final deviceIdAsync = ref.watch(deviceIdProvider);
     final userProfile = ref.watch(userProfileProvider);
     final splashDelay = ref.watch(splashDelayProvider);
 
     final Widget homeScreen;
-    if (splashDelay.isLoading) {
+    if (splashDelay.isLoading || deviceIdAsync.isLoading) {
       homeScreen = const SplashLoadingView();
     } else {
+      final deviceId = deviceIdAsync.value ?? '';
       homeScreen = userProfile.when(
         data: (altrUser) {
           if (altrUser == null) {
@@ -57,7 +60,9 @@ class AltrChat extends ConsumerWidget {
           if (!altrUser.profileOnboardingCompleted) {
             return const ProfileOnboardingPage();
           }
-          if (!altrUser.workspaceOnboardingCompleted) {
+          
+          final activeWorkspaceId = altrUser.currentWorkspaces[deviceId];
+          if (activeWorkspaceId == null || activeWorkspaceId.isEmpty) {
             return const WorkspaceOnboardingPage();
           }
           return const LayoutShell();
@@ -71,8 +76,8 @@ class AltrChat extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: homeScreen,
-      theme: theme.light(selectedColorOption),
-      darkTheme: theme.dark(selectedColorOption),
+      theme: theme.light(accentSeedColor),
+      darkTheme: theme.dark(accentSeedColor),
       themeMode: currentThemeMode,
     );
   }

@@ -32,6 +32,7 @@ void main() {
         overrides: [
           userProfileProvider.overrideWith((ref) => mockUser),
           splashDelayProvider.overrideWith((ref) => null),
+          deviceIdProvider.overrideWith((ref) => 'test_device'),
         ],
         child: const AltrChat(),
       ),

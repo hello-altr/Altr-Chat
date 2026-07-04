@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
-import 'package:chat/providers/theme_provider.dart';
+import 'package:chat/providers/appearance_notifier.dart';
 
 // Widgets
 import 'package:chat/widgets/theme_preview.dart';
@@ -12,7 +12,7 @@ class ThemeModeOption extends ConsumerWidget {
   final ThemeMode mode;
   final String label;
   final bool isSelected;
-  final ThemeColorOption selectedColor;
+  final Color selectedColor;
 
   const ThemeModeOption({
     super.key,
@@ -27,7 +27,7 @@ class ThemeModeOption extends ConsumerWidget {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
-        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+        ref.read(appearanceProvider.notifier).updateThemeMode(mode);
       },
       behavior: HitTestBehavior.opaque,
       child: Column(
