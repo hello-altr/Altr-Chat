@@ -1,4 +1,5 @@
 // Packages
+import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Theme
@@ -13,10 +14,31 @@ class AltrTheme {
       brightness: brightness,
     );
 
+    // Build the Inter + Montserrat GoogleFonts text theme statically
+    final baseTextTheme = brightness == Brightness.dark
+        ? Typography.material2021().white
+        : Typography.material2021().black;
+
+    final bodyTextTheme = GoogleFonts.getTextTheme("Inter", baseTextTheme);
+    final displayTextTheme = GoogleFonts.getTextTheme("Montserrat", baseTextTheme);
+
+    final textTheme = displayTextTheme.copyWith(
+      bodyLarge: bodyTextTheme.bodyLarge,
+      bodyMedium: bodyTextTheme.bodyMedium,
+      bodySmall: bodyTextTheme.bodySmall,
+      labelLarge: bodyTextTheme.labelLarge,
+      labelMedium: bodyTextTheme.labelMedium,
+      labelSmall: bodyTextTheme.labelSmall,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: baseColorScheme,
+      textTheme: textTheme.apply(
+        bodyColor: baseColorScheme.onSurface,
+        displayColor: baseColorScheme.onSurface,
+      ),
       dialogTheme: AltrComponentTheme.dialogThemeData(),
       cardTheme: AltrComponentTheme.cardThemeData(),
       inputDecorationTheme: AltrComponentTheme.inputDecorationThemeData(baseColorScheme),
