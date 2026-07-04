@@ -1,11 +1,12 @@
 // Packages
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:nativeapi/nativeapi.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io';
+import 'dart:developer';
 
 // Layout Shell
 import 'package:chat/layout_shell.dart';
@@ -14,6 +15,9 @@ import 'package:chat/layout_shell.dart';
 import 'package:chat/providers/appearance_notifier.dart';
 import 'package:chat/providers/auth_provider.dart';
 
+// Services
+import 'package:chat/services/window_config.dart';
+
 // Pages
 import 'package:chat/pages/workspace_onboarding_page.dart';
 import 'package:chat/pages/onboarding_page.dart';
@@ -21,28 +25,38 @@ import 'package:chat/pages/welcome_page.dart';
 import 'package:chat/pages/splash_page.dart';
 
 // Theme & Utils
-import 'package:chat/theme/app_theme.dart'; 
-import 'package:chat/values.dart';
+import 'package:chat/theme/app_theme.dart';
 
 // Firebase
-import 'firebase_options.dart'; 
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    final window = WindowManager.instance.getCurrent();
-    window?.setMinimumSize(kMinWindowSize.width, kMinWindowSize.height);
+  // Safely configures desktop windows on macOS without breaking the Web
+  if (!kIsWeb) {
+    configureDesktopWindow();
   }
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); 
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final prefs = await SharedPreferences.getInstance();
-  runApp(ProviderScope(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-    ],
-    child: const AltrChat(),
-  ));
+
+  final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
+  if (isFirstLaunch) {
+    log('First Launch', name: 'Launch');
+    try {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
+    } catch (_) {}
+    await prefs.setBool('is_first_launch', false);
+  }
+
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const AltrChat(),
+    ),
+  );
 }
 
 final splashDelayProvider = FutureProvider<void>((ref) async {
@@ -74,7 +88,7 @@ class AltrChat extends ConsumerWidget {
           if (!altrUser.profileOnboardingCompleted) {
             return const ProfileOnboardingPage();
           }
-          
+
           final activeWorkspaceId = altrUser.currentWorkspaces[deviceId];
           if (activeWorkspaceId == null || activeWorkspaceId.isEmpty) {
             return const WorkspaceOnboardingPage();
@@ -85,7 +99,6 @@ class AltrChat extends ConsumerWidget {
         error: (err, stack) => const WelcomeAuthenticationView(),
       );
     }
-
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,

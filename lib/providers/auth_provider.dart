@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:developer';
 
 // Models & Repositories
 import 'package:chat/repositories/user_repository.dart';
@@ -15,21 +16,31 @@ import 'package:chat/services/device_service.dart';
 
 // Provides continuous reactive exposure of the active Firebase Auth state
 final authStateProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
+  return FirebaseAuth.instance.authStateChanges().map((user) {
+    log('Auth state changes stream emitted user UID: ${user?.uid ?? "null"}', name: 'Auth');
+    return user;
+  });
 });
 
 final userProfileProvider = FutureProvider<AltrUser?>((ref) async {
   final authState = ref.watch(authStateProvider).value;
-  if (authState == null) return null;
+  if (authState == null) {
+    log('No active auth state user found. Returning null profile.', name: 'Auth');
+    return null;
+  }
 
-
+  log('Auth state found. Syncing user ${authState.uid} to Firestore...', name: 'Auth');
   final userRepository = UserRepository();
   await userRepository.syncGoogleUserToFirestore(authState);
+  log('User profile synced. Querying Firestore document...', name: 'Auth');
 
   final doc = await FirebaseFirestore.instance.collection('users').doc(authState.uid).get();
   if (doc.exists && doc.data() != null) {
-    return AltrUser.fromMap(doc.data()!);
+    final altrUser = AltrUser.fromMap(doc.data()!);
+    log('Successfully loaded AltrUser profile: ${altrUser.emailId}', name: 'Auth');
+    return altrUser;
   }
+  log('User document not found in Firestore collection for UID: ${authState.uid}', name: 'Auth');
   return null;
 });
 
@@ -74,6 +85,7 @@ final currentWorkspaceProvider = Provider<Map<String, dynamic>?>((ref) {
 });
 
 Future<void> signInWithGoogle(BuildContext context) async {
+  log('Starting Google Sign-In process...', name: 'Auth');
   try {
     final GoogleSignIn googleSignIn = GoogleSignIn(
       clientId: kIsWeb
@@ -82,8 +94,10 @@ Future<void> signInWithGoogle(BuildContext context) async {
     );
     final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
     if (googleUser == null) {
+      log('Google Sign-In was cancelled by the user.', name: 'Auth');
       return;
     }
+    log('Google Sign-In successful: ${googleUser.email}. Requesting credentials...', name: 'Auth');
 
     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
     final AuthCredential credential = GoogleAuthProvider.credential(
@@ -91,8 +105,11 @@ Future<void> signInWithGoogle(BuildContext context) async {
       idToken: googleAuth.idToken,
     );
 
-    await FirebaseAuth.instance.signInWithCredential(credential);
+    log('Authenticating credentials with Firebase...', name: 'Auth');
+    final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    log('Firebase Sign-In successful: ${userCredential.user?.uid}', name: 'Auth');
   } catch (e) {
+    log('Authentication process encountered an error: $e', error: e, name: 'Auth');
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
