@@ -52,7 +52,14 @@ class UserRepository {
         // to preserve prior user profile configuration overrides.
         final data = docSnapshot.data();
         final currentWorkspaces = data?['current_workspaces'] as Map?;
-        final existingValue = currentWorkspaces?[deviceId] ?? '';
+        String existingValue = currentWorkspaces?[deviceId] ?? '';
+
+        if (existingValue.isEmpty) {
+          final activeWorkspaces = List<String>.from(data?['active_workspaces'] ?? []);
+          if (activeWorkspaces.isNotEmpty) {
+            existingValue = activeWorkspaces.first;
+          }
+        }
 
         transaction.update(userRef, {
           'current_workspaces.$deviceId': existingValue,

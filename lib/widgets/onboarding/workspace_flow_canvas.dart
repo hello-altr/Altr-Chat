@@ -170,10 +170,6 @@ class _WorkspaceFlowCanvasState extends ConsumerState<WorkspaceFlowCanvas> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Workspace Options',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
         leading: showBack
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),

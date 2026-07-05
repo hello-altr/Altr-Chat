@@ -1,6 +1,7 @@
 // Packages
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -91,6 +92,14 @@ class AltrChat extends ConsumerWidget {
 
           final activeWorkspaceId = altrUser.currentWorkspaces[deviceId];
           if (activeWorkspaceId == null || activeWorkspaceId.isEmpty) {
+            if (altrUser.activeWorkspaces.isNotEmpty) {
+              final fallbackWorkspace = altrUser.activeWorkspaces.first;
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(altrUser.userId)
+                  .update({'current_workspaces.$deviceId': fallbackWorkspace});
+              return const LayoutShell();
+            }
             return const WorkspaceOnboardingPage();
           }
           return const LayoutShell();
