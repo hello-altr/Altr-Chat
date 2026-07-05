@@ -1,6 +1,6 @@
 // Packages
 import 'package:hugeicons_pro/hugeicons.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class UniversalSearchBar extends StatelessWidget {
   final TextEditingController controller;
@@ -47,12 +47,12 @@ class UniversalSearchBar extends StatelessWidget {
           ),
           suffixIcon: searchQuery.isNotEmpty
               ? Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: IconButton(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton(
                     icon: const Icon(Icons.clear, size: 18),
                     onPressed: onClear,
                   ),
-              )
+                )
               : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),

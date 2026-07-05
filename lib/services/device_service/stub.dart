@@ -1,0 +1,1 @@
+Future<String> getDeviceId() => throw UnsupportedError('Cannot get device ID on unsupported platforms');

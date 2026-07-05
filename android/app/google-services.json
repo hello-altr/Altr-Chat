@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1085731614579",
+    "project_id": "hello-altr",
+    "storage_bucket": "hello-altr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1085731614579:android:0eb3f347c10a7c9b64df06",
+        "android_client_info": {
+          "package_name": "hello.altr.chat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1085731614579-76aieni8lhrs7sol4ijasn5v8ocgsb0a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hello.altr.chat",
+            "certificate_hash": "488840e823b9441527abffe3755520308816f9bf"
+          }
+        },
+        {
+          "client_id": "1085731614579-8da3in5pd6rbtefa256c6jgrgc7djdhd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBx9JCaV3W7okxokjZ7I5P1bIZHtXw6op8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1085731614579-8da3in5pd6rbtefa256c6jgrgc7djdhd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1085731614579-7o5itj8fbh0h7prujtt4suvqsl6latg4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "hello.altr.chat"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

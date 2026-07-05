@@ -9,12 +9,16 @@ import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
+import 'package:chat/widgets/workspace_dropdown_switcher.dart';
 import 'package:chat/widgets/floating_nav_pill.dart';
+import 'package:chat/widgets/empty_state.dart';
 
 // Pages
 import 'package:chat/pages/shared_chat_canvas.dart';
-import 'package:chat/pages/settings_page.dart';
+import 'package:chat/pages/appearance_page.dart';
 import 'package:chat/pages/channels_page.dart';
+import 'package:chat/pages/settings_page.dart';
+import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
 
 class DesktopShell extends ConsumerStatefulWidget {
@@ -51,11 +55,15 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     // Listen to tab selection changes to animate the horizontal PageView directory
     ref.listen<int>(navIndexProvider, (previous, next) {
       if (_sidebarPageController.hasClients && next != _sidebarPageController.page?.round()) {
-        _sidebarPageController.animateToPage(
-          next,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.fastOutSlowIn,
-        );
+        if (previous != null && (next - previous).abs() > 1) {
+          _sidebarPageController.jumpToPage(next);
+        } else {
+          _sidebarPageController.animateToPage(
+            next,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.fastOutSlowIn,
+          );
+        }
       }
     });
 
@@ -131,30 +139,13 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
           SettingsPanelType.profile => const ProfileCardInspector(),
           SettingsPanelType.appearance => const AppearanceSettingsPanel(),
           SettingsPanelType.none => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    HugeIconsStroke.settings01,
-                    size: 64,
-                    color: theme.colorScheme.onSurfaceVariant.withAlpha(50),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Aero Settings Details Canvas",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Click the profile banner or preferences to view details.",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
-                    ),
-                  ),
-                ],
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420.0),
+                child: const EmptyStateWidget(
+                  icon: Icons.palette_outlined,
+                  title: "Appearance Settings",
+                  subtitle: "Select a configuration option from the index tier panel to begin personalization profiles.",
+                ),
               ),
             ),
         },
@@ -164,28 +155,36 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     return Scaffold(
       body: Row(
         children: [
-          // Column 1: Left Directory Drawer Panel (Variable Width, Swipeable)
           SizedBox(
             width: _sidebarWidth,
-            child: Column(
+            child: Stack(
               children: [
-                Expanded(
-                  child: PageView(
-                    controller: _sidebarPageController,
-                    onPageChanged: (index) {
-                      ref.read(navIndexProvider.notifier).state = index;
-                      // Clear chat session trace
-                      ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
-                      ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
-                    },
-                    children: const [
-                      DirectMessagesList(),
-                      WorkspaceChannelsTree(),
-                      SettingsIndexHub(),
-                    ],
-                  ),
+                Column(
+                  children: [
+                    Expanded(
+                      child: PageView(
+                        controller: _sidebarPageController,
+                        onPageChanged: (index) {
+                          ref.read(navIndexProvider.notifier).state = index;
+                          // Clear chat session trace
+                          ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                          ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+                        },
+                        children: const [
+                          DirectMessagesList(),
+                          WorkspaceChannelsTree(),
+                          SettingsIndexHub(),
+                        ],
+                      ),
+                    ),
+                    const FloatingNavPill(isDesktop: true),
+                  ],
                 ),
-                const FloatingNavPill(isDesktop: true),
+                Positioned(
+                  top: 12.0 + MediaQuery.of(context).padding.top,
+                  right: 16.0,
+                  child: const WorkspaceDropdownSwitcher(),
+                ),
               ],
             ),
           ),
@@ -195,7 +194,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
             behavior: HitTestBehavior.translucent,
             onHorizontalDragUpdate: (details) {
               setState(() {
-                _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(240.0, 480.0);
+                _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(400.0, 520.0);
               });
             },
             child: MouseRegion(
