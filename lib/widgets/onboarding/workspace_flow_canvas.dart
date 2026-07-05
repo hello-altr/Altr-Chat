@@ -119,9 +119,17 @@ class _WorkspaceFlowCanvasState extends ConsumerState<WorkspaceFlowCanvas> {
         'members': FieldValue.arrayUnion([user.uid]),
       });
 
+      final deviceRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('current_workspaces')
+          .doc(deviceId);
+      batch.set(deviceRef, {
+        'current_workspace': token,
+      }, SetOptions(merge: true));
+
       final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       batch.update(userRef, {
-        'current_workspaces.$deviceId': token,
         'active_workspaces': FieldValue.arrayUnion([token]),
         'workspace_onboarding_completed': true,
       });

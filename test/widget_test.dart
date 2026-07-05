@@ -22,7 +22,7 @@ void main() {
       photoUrl: '',
       emailId: 'test@example.com',
       activeWorkspaces: ['test_ws'],
-      currentWorkspaces: {'test_device': 'test_ws'},
+      currentWorkspace: 'test_ws',
       onboardingCompleted: true,
       profileOnboardingCompleted: true,
       workspaceOnboardingCompleted: true,

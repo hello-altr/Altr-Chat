@@ -29,6 +29,12 @@ final userProfileProvider = FutureProvider<AltrUser?>((ref) async {
     return null;
   }
 
+  final deviceIdAsync = ref.watch(deviceIdProvider);
+  final deviceId = deviceIdAsync.value;
+  if (deviceId == null) {
+    return null;
+  }
+
   log('Auth state found. Syncing user ${authState.uid} to Firestore...', name: 'Auth');
   final userRepository = UserRepository();
   await userRepository.syncGoogleUserToFirestore(authState);
@@ -36,7 +42,14 @@ final userProfileProvider = FutureProvider<AltrUser?>((ref) async {
 
   final doc = await FirebaseFirestore.instance.collection('users').doc(authState.uid).get();
   if (doc.exists && doc.data() != null) {
-    final altrUser = AltrUser.fromMap(doc.data()!);
+    final deviceDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(authState.uid)
+        .collection('current_workspaces')
+        .doc(deviceId)
+        .get();
+    final currentWorkspace = deviceDoc.data()?['current_workspace'] as String? ?? '';
+    final altrUser = AltrUser.fromMap(doc.data()!, currentWorkspace: currentWorkspace);
     log('Successfully loaded AltrUser profile: ${altrUser.emailId}', name: 'Auth');
     return altrUser;
   }
@@ -50,10 +63,9 @@ final deviceIdProvider = FutureProvider<String>((ref) async {
 
 final currentWorkspaceIdProvider = Provider<String?>((ref) {
   final user = ref.watch(userProfileProvider).value;
-  final deviceId = ref.watch(deviceIdProvider).value;
   if (user == null) return null;
-  final selected = deviceId != null ? user.currentWorkspaces[deviceId] : null;
-  if (selected != null && selected.isNotEmpty) return selected;
+  final selected = user.currentWorkspace;
+  if (selected.isNotEmpty) return selected;
   return user.activeWorkspaces.isNotEmpty ? user.activeWorkspaces.first : null;
 });
 
