@@ -21,10 +21,12 @@ class WorkspaceDropdownSwitcher extends ConsumerWidget {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
-            .collection('current_workspaces')
+            .collection('devices')
             .doc(deviceId)
             .set({
-          'current_workspace': workspaceId,
+          'device_id': deviceId,
+          'active_workspace_id': workspaceId,
+          'last_active': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         ref.invalidate(userProfileProvider);
       } catch (e) {

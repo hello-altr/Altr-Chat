@@ -45,11 +45,11 @@ final userProfileProvider = FutureProvider<AltrUser?>((ref) async {
     final deviceDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(authState.uid)
-        .collection('current_workspaces')
+        .collection('devices')
         .doc(deviceId)
         .get();
-    final currentWorkspace = deviceDoc.data()?['current_workspace'] as String? ?? '';
-    final altrUser = AltrUser.fromMap(doc.data()!, currentWorkspace: currentWorkspace);
+    final activeWorkspaceId = deviceDoc.data()?['active_workspace_id'] as String? ?? '';
+    final altrUser = AltrUser.fromMap(doc.data()!, activeWorkspaceId: activeWorkspaceId);
     log('Successfully loaded AltrUser profile: ${altrUser.emailId}', name: 'Auth');
     return altrUser;
   }
@@ -64,17 +64,17 @@ final deviceIdProvider = FutureProvider<String>((ref) async {
 final currentWorkspaceIdProvider = Provider<String?>((ref) {
   final user = ref.watch(userProfileProvider).value;
   if (user == null) return null;
-  final selected = user.currentWorkspace;
+  final selected = user.activeWorkspaceId;
   if (selected.isNotEmpty) return selected;
-  return user.activeWorkspaces.isNotEmpty ? user.activeWorkspaces.first : null;
+  return user.joinedWorkspaces.isNotEmpty ? user.joinedWorkspaces.first : null;
 });
 
 final userWorkspacesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final user = ref.watch(userProfileProvider).value;
-  if (user == null || user.activeWorkspaces.isEmpty) return [];
+  if (user == null || user.joinedWorkspaces.isEmpty) return [];
 
   final List<Map<String, dynamic>> workspaces = [];
-  for (final wsId in user.activeWorkspaces) {
+  for (final wsId in user.joinedWorkspaces) {
     final doc = await FirebaseFirestore.instance.collection('workspaces').doc(wsId).get();
     if (doc.exists && doc.data() != null) {
       workspaces.add(doc.data()!);

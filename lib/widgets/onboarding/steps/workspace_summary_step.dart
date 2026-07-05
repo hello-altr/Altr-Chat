@@ -81,15 +81,17 @@ class _WorkspaceSummaryStepState extends ConsumerState<WorkspaceSummaryStep> {
       final deviceRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .collection('current_workspaces')
+          .collection('devices')
           .doc(deviceId);
       batch.set(deviceRef, {
-        'current_workspace': workspaceId,
+        'device_id': deviceId,
+        'active_workspace_id': workspaceId,
+        'last_active': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       batch.update(userRef, {
-        'active_workspaces': FieldValue.arrayUnion([workspaceId]),
+        'joined_workspaces': FieldValue.arrayUnion([workspaceId]),
         'workspace_onboarding_completed': true,
       });
 

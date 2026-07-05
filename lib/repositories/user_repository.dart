@@ -43,7 +43,7 @@ class UserRepository {
   Future<void> syncGoogleUserToFirestore(User firebaseAuthUser) async {
     final deviceId = await DeviceService.getDeviceId();
     final userRef = _firestore.collection('users').doc(firebaseAuthUser.uid);
-    final deviceRef = userRef.collection('current_workspaces').doc(deviceId);
+    final deviceRef = userRef.collection('devices').doc(deviceId);
 
     await _firestore.runTransaction((transaction) async {
       final docSnapshot = await transaction.get(userRef);
@@ -53,19 +53,21 @@ class UserRepository {
         // Case A (Document Already Exists): Execute atomic field update only on the device matrix block
         // to preserve prior user profile configuration overrides.
         final data = docSnapshot.data();
-        final activeWorkspaces = List<String>.from(data?['active_workspaces'] ?? []);
+        final joinedWorkspaces = List<String>.from(data?['joined_workspaces'] ?? []);
         
-        String currentWorkspace = '';
+        String activeWorkspaceId = '';
         if (deviceSnapshot.exists) {
-          currentWorkspace = deviceSnapshot.data()?['current_workspace'] as String? ?? '';
+          activeWorkspaceId = deviceSnapshot.data()?['active_workspace_id'] as String? ?? '';
         }
 
-        if (currentWorkspace.isEmpty && activeWorkspaces.isNotEmpty) {
-          currentWorkspace = activeWorkspaces.first;
+        if (activeWorkspaceId.isEmpty && joinedWorkspaces.isNotEmpty) {
+          activeWorkspaceId = joinedWorkspaces.first;
         }
 
         transaction.set(deviceRef, {
-          'current_workspace': currentWorkspace,
+          'device_id': deviceId,
+          'active_workspace_id': activeWorkspaceId,
+          'last_active': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } else {
         // Case B (First Time Sign-In Detected): Initialize a brand new document record
@@ -83,14 +85,16 @@ class UserRepository {
           'display_name': firebaseAuthUser.displayName ?? 'Altr Member',
           'photo_url': firebaseAuthUser.photoURL ?? '',
           'email_id': email,
-          'active_workspaces': <String>[],
+          'joined_workspaces': <String>[],
           'onboarding_completed': false,
           'profile_onboarding_completed': false,
           'workspace_onboarding_completed': false,
         });
 
         transaction.set(deviceRef, {
-          'current_workspace': '',
+          'device_id': deviceId,
+          'active_workspace_id': '',
+          'last_active': FieldValue.serverTimestamp(),
         });
       }
     });

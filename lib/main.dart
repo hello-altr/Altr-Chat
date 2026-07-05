@@ -90,20 +90,22 @@ class AltrChat extends ConsumerWidget {
             return const ProfileOnboardingPage();
           }
 
-          if (altrUser.activeWorkspaces.isEmpty) {
+          if (altrUser.joinedWorkspaces.isEmpty) {
             return const WorkspaceOnboardingPage();
           }
 
-          final currentWorkspace = altrUser.currentWorkspace;
-          if (currentWorkspace.isEmpty) {
-            final fallbackWorkspace = altrUser.activeWorkspaces.first;
+          final activeWorkspaceId = altrUser.activeWorkspaceId;
+          if (activeWorkspaceId.isEmpty) {
+            final fallbackWorkspace = altrUser.joinedWorkspaces.first;
             FirebaseFirestore.instance
                 .collection('users')
                 .doc(altrUser.userId)
-                .collection('current_workspaces')
+                .collection('devices')
                 .doc(deviceId)
                 .set({
-                  'current_workspace': fallbackWorkspace,
+                  'device_id': deviceId,
+                  'active_workspace_id': fallbackWorkspace,
+                  'last_active': FieldValue.serverTimestamp(),
                 }, SetOptions(merge: true));
           }
           return const LayoutShell();
