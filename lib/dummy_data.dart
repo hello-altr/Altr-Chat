@@ -10,6 +10,7 @@ export 'package:chat/models/dm_model.dart';
 // Premium mock data source for Workspace Channels
 const List<ChannelModel> mockChannels = [
   ChannelModel(
+    id: 'general',
     name: 'general',
     isPrivate: false,
     lastMessage: 'Welcome to HelloAltr Chat! Let us get started.',
@@ -18,6 +19,7 @@ const List<ChannelModel> mockChannels = [
     warningCount: 0,
   ),
   ChannelModel(
+    id: 'project-altr',
     name: 'project-altr',
     isPrivate: true,
     lastMessage: 'We should review the new layout specs carefully.',
@@ -26,6 +28,7 @@ const List<ChannelModel> mockChannels = [
     warningCount: 1,
   ),
   ChannelModel(
+    id: 'design-assets',
     name: 'design-assets',
     isPrivate: false,
     lastMessage: 'References are uploaded to /docs directory.',
@@ -34,6 +37,7 @@ const List<ChannelModel> mockChannels = [
     warningCount: 0,
   ),
   ChannelModel(
+    id: 'announcements',
     name: 'announcements',
     isPrivate: false,
     lastMessage: 'Version 1.0 architecture launch today!',
@@ -42,6 +46,7 @@ const List<ChannelModel> mockChannels = [
     warningCount: 0,
   ),
   ChannelModel(
+    id: 'random',
     name: 'random',
     isPrivate: false,
     lastMessage: 'Check out this cool new glassmorphism visualizer!',
@@ -54,30 +59,40 @@ const List<ChannelModel> mockChannels = [
 // Premium mock data source for Direct Messages
 const List<DmModel> mockDms = [
   DmModel(
+    id: 'dm-asher',
+    participants: ['asher', 'user'],
     userName: 'Asher',
     lastMessage: 'Hey, can you help me check this code?',
     time: '11:15 AM',
     unreadCount: 1,
   ),
   DmModel(
+    id: 'dm-sophia',
+    participants: ['sophia', 'user'],
     userName: 'Sophia',
     lastMessage: 'The designs look amazing! Let us go ahead.',
     time: '9:45 AM',
     unreadCount: 0,
   ),
   DmModel(
+    id: 'dm-benjamin',
+    participants: ['benjamin', 'user'],
     userName: 'Benjamin',
     lastMessage: 'I will join the call in 5 mins.',
     time: 'Yesterday',
     unreadCount: 0,
   ),
   DmModel(
+    id: 'dm-olivia',
+    participants: ['olivia', 'user'],
     userName: 'Olivia',
     lastMessage: 'Let us catch up later.',
     time: 'Monday',
     unreadCount: 3,
   ),
   DmModel(
+    id: 'dm-emma',
+    participants: ['emma', 'user'],
     userName: 'Emma',
     lastMessage: 'Thanks for the review!',
     time: 'Jun 28',

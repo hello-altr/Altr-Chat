@@ -6,6 +6,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
+import 'package:chat/providers/auth_provider.dart';
+import 'package:chat/repositories/chat_repository.dart';
 
 // Enums
 import 'package:chat/enums/layout_mode.dart';
@@ -79,6 +81,25 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
       );
     }
 
+    // Resolve channel name or DM counterpart display name
+    String titleText = activeId;
+    if (isChannel) {
+      final channelAsync = ref.watch(activeChannelProvider(activeId));
+      titleText = channelAsync.value?.name ?? activeId;
+    } else {
+      final dmAsync = ref.watch(activeDmProvider(activeId));
+      final dm = dmAsync.value;
+      if (dm != null) {
+        final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
+        final counterpartId = dm.participants.firstWhere(
+          (id) => id != currentUserId,
+          orElse: () => currentUserId,
+        );
+        final profileAsync = ref.watch(userProfileByIdProvider(counterpartId));
+        titleText = profileAsync.value?.displayName ?? 'Loading...';
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false, // Custom back button used on mobile
@@ -114,7 +135,7 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '$prefix$activeId',
+                    '$prefix$titleText',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -130,6 +151,7 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
             ),
           ],
         ),
+
         actions: [
           IconButton(
             icon: const Icon(HugeIconsStroke.call),
@@ -166,7 +188,7 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "You are currently viewing $prefix$activeId.",
+                    "You are currently viewing $prefix$titleText.",
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
                     ),

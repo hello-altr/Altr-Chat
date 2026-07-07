@@ -70,11 +70,19 @@ class _WorkspaceSummaryStepState extends ConsumerState<WorkspaceSummaryStep> {
       });
 
       for (final channelName in widget.channels) {
-        final channelRef = FirebaseFirestore.instance.collection('chat').doc();
+        final channelRef = FirebaseFirestore.instance
+            .collection('chat')
+            .doc(workspaceId)
+            .collection('Channels')
+            .doc();
         batch.set(channelRef, {
-          'workspace_id': workspaceId,
           'name': channelName.replaceAll('#', ''),
+          'is_private': false,
+          'is_archived': false,
+          'members': [user.uid],
           'created_at': FieldValue.serverTimestamp(),
+          'last_message': 'Workspace channel created.',
+          'last_message_time': FieldValue.serverTimestamp(),
         });
       }
 
