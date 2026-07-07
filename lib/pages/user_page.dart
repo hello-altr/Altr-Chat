@@ -9,6 +9,10 @@ import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
+import 'package:chat/repositories/chat_repository.dart';
+import 'package:chat/widgets/action_button.dart';
+import 'package:chat/widgets/details_row.dart';
+import 'package:chat/widgets/section_header.dart';
 import 'package:chat/enums/layout_mode.dart';
 
 class UsersAndGroupsPage extends ConsumerStatefulWidget {
@@ -22,18 +26,18 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
   late PageController _pageController;
   late TextEditingController _userSearchController;
   late TextEditingController _groupSearchController;
-  int _currentPage = 0;
   String _userSearchQuery = '';
   String _groupSearchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 0);
+    final initialPage = ref.read(usersAndGroupsPageIndexProvider);
+    _pageController = PageController(initialPage: initialPage);
     _userSearchController = TextEditingController();
     _userSearchController.addListener(() {
       setState(() {
-        _userSearchQuery = _userSearchController.text;
+        _userSearchQuery = _userSearchController.text; 
       });
     });
     _groupSearchController = TextEditingController();
@@ -239,16 +243,16 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                 if (name.isNotEmpty && handle.isNotEmpty) {
                   try {
                     final groupRef = FirebaseFirestore.instance
-                        .collection('chat')
+                        .collection('workspaces')
                         .doc(workspaceId)
-                        .collection('UserGroups')
+                        .collection('user_groups')
                         .doc();
 
                     await groupRef.set({
                       'id': groupRef.id,
                       'name': name,
                       'handle': handle,
-                      'members': [currentUserId],
+                      'members': const [],
                       'created_by': currentUserId,
                       'created_at': FieldValue.serverTimestamp(),
                       'is_promoted': false,
@@ -278,81 +282,6 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                 }
               },
               child: const Text('Create'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _viewGroupDetails(BuildContext context, String workspaceId, Map<String, dynamic> group) async {
-    final theme = Theme.of(context);
-    final groupMembers = List<String>.from(group['members'] ?? []);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(group['name'] ?? 'User Group'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '@${group['handle']}',
-                  style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Members (${groupMembers.length}):',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                if (groupMembers.isEmpty)
-                  const Text('No members in this group.')
-                else
-                  Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('users')
-                          .where('user_id', whereIn: groupMembers)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) return Text('Error: ${snapshot.error}');
-                        if (!snapshot.hasData) return const CircularProgressIndicator();
-                        
-                        final users = snapshot.data!.docs;
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: users.length,
-                          itemBuilder: (context, index) {
-                            final userData = users[index].data() as Map<String, dynamic>;
-                            final displayName = userData['display_name'] ?? 'Aero User';
-                            final handle = userData['user_name'] ?? 'user';
-                            return ListTile(
-                              leading: CircleAvatar(
-                                radius: 14,
-                                backgroundColor: _getInitialsBgColor(displayName),
-                                child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U', style: const TextStyle(fontSize: 10, color: Colors.white)),
-                              ),
-                              title: Text(displayName, style: const TextStyle(fontSize: 12)),
-                              subtitle: Text('@$handle', style: const TextStyle(fontSize: 10)),
-                              dense: true,
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Close'),
             ),
           ],
         );
@@ -414,9 +343,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                       onTap: () async {
                         try {
                           await FirebaseFirestore.instance
-                              .collection('chat')
+                              .collection('workspaces')
                               .doc(workspaceId)
-                              .collection('UserGroups')
+                              .collection('user_groups')
                               .doc(group['id'])
                               .update({
                             'members': FieldValue.arrayUnion([userId])
@@ -460,9 +389,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
     final isCurrentlyPromoted = group['is_promoted'] == true;
     try {
       await FirebaseFirestore.instance
-          .collection('chat')
+          .collection('workspaces')
           .doc(workspaceId)
-          .collection('UserGroups')
+          .collection('user_groups')
           .doc(group['id'])
           .update({'is_promoted': !isCurrentlyPromoted});
 
@@ -492,9 +421,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
     final theme = Theme.of(context);
     try {
       await FirebaseFirestore.instance
-          .collection('chat')
+          .collection('workspaces')
           .doc(workspaceId)
-          .collection('UserGroups')
+          .collection('user_groups')
           .doc(groupId)
           .delete();
 
@@ -520,7 +449,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
     }
   }
 
-  Widget _buildFloatingPill(ThemeData theme) {
+  Widget _buildFloatingPill(ThemeData theme, int currentPage) {
     return Center(
       child: Container(
         width: 280,
@@ -546,7 +475,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
             Expanded(
               child: GestureDetector(
                 onTap: () {
-                  setState(() => _currentPage = 0);
+                  ref.read(usersAndGroupsPageIndexProvider.notifier).state = 0;
                   _pageController.animateToPage(
                     0,
                     duration: const Duration(milliseconds: 350),
@@ -556,7 +485,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   decoration: BoxDecoration(
-                    color: _currentPage == 0
+                    color: currentPage == 0
                         ? theme.colorScheme.primaryContainer
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(17),
@@ -566,9 +495,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        _currentPage == 0 ? HugeIconsSolid.user : HugeIconsStroke.user,
+                        currentPage == 0 ? HugeIconsSolid.user : HugeIconsStroke.user,
                         size: 14,
-                        color: _currentPage == 0
+                        color: currentPage == 0
                             ? theme.colorScheme.onPrimaryContainer
                             : theme.colorScheme.onSurfaceVariant,
                       ),
@@ -577,7 +506,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                         'Users',
                         style: theme.textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: _currentPage == 0
+                          color: currentPage == 0
                               ? theme.colorScheme.primary
                               : theme.colorScheme.onSurfaceVariant,
                         ),
@@ -590,7 +519,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
             Expanded(
               child: GestureDetector(
                 onTap: () {
-                  setState(() => _currentPage = 1);
+                  ref.read(usersAndGroupsPageIndexProvider.notifier).state = 1;
                   _pageController.animateToPage(
                     1,
                     duration: const Duration(milliseconds: 350),
@@ -600,7 +529,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   decoration: BoxDecoration(
-                    color: _currentPage == 1
+                    color: currentPage == 1
                         ? theme.colorScheme.primaryContainer
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(17),
@@ -610,9 +539,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        _currentPage == 1 ? HugeIconsSolid.userGroup : HugeIconsStroke.userGroup,
+                        currentPage == 1 ? HugeIconsSolid.userGroup : HugeIconsStroke.userGroup,
                         size: 14,
-                        color: _currentPage == 1
+                        color: currentPage == 1
                             ? theme.colorScheme.onPrimaryContainer
                             : theme.colorScheme.onSurfaceVariant,
                       ),
@@ -621,7 +550,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                         'Groups',
                         style: theme.textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: _currentPage == 1
+                          color: currentPage == 1
                               ? theme.colorScheme.primary
                               : theme.colorScheme.onSurfaceVariant,
                         ),
@@ -720,8 +649,19 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
 
     final isAdmin = currentUserId == creatorId;
     final isManager = managers.contains(currentUserId) || isAdmin;
+    final _viewHistory = ref.watch(usersAndGroupsViewHistoryProvider);
+    final _currentPage = ref.watch(usersAndGroupsPageIndexProvider);
 
-    return Scaffold(
+    if (!_pageController.hasClients && _pageController.initialPage != _currentPage) {
+      _pageController.dispose();
+      _pageController = PageController(initialPage: _currentPage);
+    }
+
+    final bodyContent = _viewHistory.isNotEmpty
+        ? (_viewHistory.last.startsWith('user:')
+            ? _buildUserProfileInspector(context, _viewHistory.last.substring(5), workspaceId, isManager)
+            : _buildUserGroupInspector(context, _viewHistory.last.substring(6), workspaceId, workspaceMembers, isManager))
+        : Scaffold(
       appBar: AppBar(
         leading: isMobile
             ? IconButton(
@@ -748,15 +688,13 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
           child: Column(
             children: [
                 const SizedBox(height: 12),
-                _buildFloatingPill(theme),
+                _buildFloatingPill(theme, _currentPage),
                 const SizedBox(height: 16),
                 Expanded(
                   child: PageView(
                     controller: _pageController,
                     onPageChanged: (index) {
-                      setState(() {
-                        _currentPage = index;
-                      });
+                      ref.read(usersAndGroupsPageIndexProvider.notifier).state = index;
                     },
                     children: [
                       // PAGE 1: USERS
@@ -826,7 +764,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                               return Padding(
                                                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                                                 child: ListTile(
-                                                  onTap: () => _dmUser(context, userId, displayName),
+                                                  onTap: () {
+                                                    ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'user:$userId']);
+                                                  },
                                                   hoverColor: theme.colorScheme.primary.withAlpha(20),
                                                   shape: RoundedRectangleBorder(
                                                     borderRadius: BorderRadius.circular(12),
@@ -929,9 +869,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                       // PAGE 2: USER GROUPS
                       StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
-                            .collection('chat')
+                            .collection('workspaces')
                             .doc(workspaceId)
-                            .collection('UserGroups')
+                            .collection('user_groups')
                             .snapshots(),
                         builder: (context, snapshot) {
                           if (snapshot.hasError) {
@@ -1017,13 +957,15 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                                   final groupData = groupDoc.data() as Map<String, dynamic>;
                                                   final name = groupData['name'] ?? 'Unnamed Group';
                                                   final handle = groupData['handle'] ?? 'group';
-                                                  final groupId = groupData['id'] ?? '';
+                                                 final groupId = groupData['id'] ?? '';
                                                   final isPromoted = groupData['is_promoted'] == true;
 
                                                   return Padding(
                                                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                                                     child: ListTile(
-                                                      onTap: () => _viewGroupDetails(context, workspaceId, groupData),
+                                                      onTap: () {
+                                                        ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'group:$groupId']);
+                                                      },
                                                       hoverColor: theme.colorScheme.primary.withAlpha(20),
                                                       shape: RoundedRectangleBorder(
                                                         borderRadius: BorderRadius.circular(12),
@@ -1051,7 +993,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                                         icon: const Icon(Icons.more_vert),
                                                         onSelected: (action) {
                                                           if (action == 'view') {
-                                                            _viewGroupDetails(context, workspaceId, groupData);
+                                                            ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'group:$groupId']);
                                                           } else if (action == 'add_user') {
                                                             _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
                                                           } else if (action == 'promote') {
@@ -1123,7 +1065,513 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
             ),
           ),
         ),
-      );
+        );
+
+    return PopScope(
+      canPop: _viewHistory.isEmpty,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
+      },
+      child: bodyContent,
+    );
+  }
+
+  Widget _buildUserProfileInspector(BuildContext context, String userId, String workspaceId, bool isManager) {
+    final theme = Theme.of(context);
+    final userAsync = ref.watch(userProfileByIdProvider(userId));
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () {
+            ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
+          },
+        ),
+        title: const Text(
+          'User Profile',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: userAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(child: Text('Error loading profile: $e')),
+          data: (user) {
+            if (user == null) {
+              return const Center(child: Text('User profile not found.'));
+            }
+            final displayName = user.displayName.isNotEmpty ? user.displayName : 'Aero User';
+            final photoUrl = user.photoUrl;
+            final handle = user.userName.isNotEmpty ? user.userName : 'user';
+            final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
+            final activeWorkspace = ref.watch(currentWorkspaceProvider);
+            final creatorId = activeWorkspace?['created_by'] ?? '';
+            final managers = List<String>.from(activeWorkspace?['managers'] ?? []);
+            final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
+            final isCreator = userId == creatorId;
+            final isThisUserManager = managers.contains(userId) || isCreator;
+            
+            String roleText = 'Member';
+            if (isCreator) {
+              roleText = 'Admin/Creator';
+            } else if (isThisUserManager) {
+              roleText = 'Manager';
+            }
+
+            return SingleChildScrollView(
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  padding: const EdgeInsets.only(
+                    top: 24.0,
+                    bottom: 90,
+                    left: 16.0,
+                    right: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Profile Header Card
+                      Center(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: photoUrl.isEmpty
+                                    ? LinearGradient(
+                                        colors: [
+                                          theme.colorScheme.primary,
+                                          theme.colorScheme.secondary,
+                                        ],
+                                      )
+                                    : null,
+                                image: photoUrl.isNotEmpty
+                                    ? DecorationImage(
+                                        image: NetworkImage(photoUrl),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary.withAlpha(40),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: photoUrl.isNotEmpty
+                                  ? null
+                                  : Text(
+                                      initials,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              displayName,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '@$handle',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Quick Actions Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ActionButton(
+                              icon: Icons.chat_bubble_outline,
+                              label: 'Send DM',
+                              onTap: () {
+                                _dmUser(context, userId, displayName);
+                              },
+                            ),
+                          ),
+                          if (isManager && userId != currentUserId && !isCreator) ...[
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ActionButton(
+                                icon: isThisUserManager ? Icons.shield : Icons.shield_outlined,
+                                label: isThisUserManager ? 'Demote' : 'Promote',
+                                onTap: () {
+                                  _promoteUser(context, workspaceId, userId, displayName);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ActionButton(
+                                icon: Icons.person_remove,
+                                label: 'Remove',
+                                onTap: () {
+                                  _removeUser(context, workspaceId, userId, displayName);
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Profile Details Card
+                      const SectionHeader(title: 'Profile Details', fontSize: 11.0),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withAlpha(80),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            DetailsRow(
+                              icon: Icons.email_outlined,
+                              label: 'Email ID',
+                              value: user.emailId,
+                            ),
+                            Divider(
+                              height: 24,
+                              color: theme.colorScheme.outlineVariant.withAlpha(80),
+                            ),
+                            DetailsRow(
+                              icon: Icons.shield,
+                              label: 'Workspace Role',
+                              value: roleText,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserGroupInspector(BuildContext context, String groupId, String workspaceId, List<String> workspaceMembers, bool isManager) {
+    final theme = Theme.of(context);
+    
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('workspaces')
+          .doc(workspaceId)
+          .collection('user_groups')
+          .doc(groupId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: Center(child: Text('Error: ${snapshot.error}')),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        
+        final groupDoc = snapshot.data!;
+        if (!groupDoc.exists) {
+          return Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new),
+                onPressed: () {
+                  ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
+                },
+              ),
+            ),
+            body: const Center(child: Text('User Group not found.')),
+          );
+        }
+        
+        final groupData = groupDoc.data() as Map<String, dynamic>;
+        final name = groupData['name'] ?? 'Unnamed Group';
+        final handle = groupData['handle'] ?? 'group';
+        final isPromoted = groupData['is_promoted'] == true;
+        final members = List<String>.from(groupData['members'] ?? []);
+
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new),
+              onPressed: () {
+                ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
+              },
+            ),
+            title: const Text(
+              'User Group Details',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  padding: const EdgeInsets.only(
+                    top: 24.0,
+                    bottom: 90,
+                    left: 16.0,
+                    right: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Group Header Card
+                      Center(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    theme.colorScheme.primaryContainer,
+                                    theme.colorScheme.secondaryContainer,
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary.withAlpha(40),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                HugeIconsStroke.userGroup,
+                                color: theme.colorScheme.primary,
+                                size: 36,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  name,
+                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                if (isPromoted) ...[
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.star, color: Colors.amber[600], size: 20),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '@$handle',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Quick Actions Row
+                      if (isManager) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ActionButton(
+                                icon: Icons.person_add_alt_1_outlined,
+                                label: 'Add Member',
+                                onTap: () {
+                                  _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ActionButton(
+                                icon: isPromoted ? Icons.star_border : Icons.star,
+                                label: isPromoted ? 'Demote Group' : 'Promote Group',
+                                onTap: () {
+                                  _promoteGroup(context, workspaceId, groupData);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ActionButton(
+                                icon: Icons.delete_outline,
+                                label: 'Delete Group',
+                                onTap: () {
+                                  _deleteGroup(context, workspaceId, groupId, name);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Group Details Card
+                      const SectionHeader(title: 'Group Details', fontSize: 11.0),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withAlpha(80),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            DetailsRow(
+                              icon: Icons.people_outline,
+                              label: 'Total Members',
+                              value: '${members.length} members',
+                            ),
+                            Divider(
+                              height: 24,
+                              color: theme.colorScheme.outlineVariant.withAlpha(80),
+                            ),
+                            DetailsRow(
+                              icon: Icons.star_outline,
+                              label: 'Starred Status',
+                              value: isPromoted ? 'Starred (Promoted)' : 'Standard Group',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Group Members List at the bottom
+                      const SectionHeader(title: 'Group Members', fontSize: 11.0),
+                      const SizedBox(height: 8),
+                      if (members.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'No members in this group yet.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: theme.colorScheme.outlineVariant.withAlpha(80),
+                            ),
+                          ),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: members.length,
+                            itemBuilder: (context, index) {
+                              final memberId = members[index];
+                              final isLast = index == members.length - 1;
+                              
+                              return Consumer(
+                                builder: (context, ref, child) {
+                                  final profileAsync = ref.watch(userProfileByIdProvider(memberId));
+                                  return profileAsync.when(
+                                    loading: () => const ListTile(title: Text('Loading member...')),
+                                    error: (e, s) => ListTile(title: Text('Error: $e')),
+                                    data: (profile) {
+                                      if (profile == null) return const SizedBox.shrink();
+                                      final displayName = profile.displayName.isNotEmpty ? profile.displayName : 'Aero User';
+                                      final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
+                                      final photoUrl = profile.photoUrl;
+
+                                      return Column(
+                                        children: [
+                                          ListTile(
+                                            onTap: () {
+                                              ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'user:$memberId']);
+                                            },
+                                            hoverColor: theme.colorScheme.primary.withAlpha(20),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            leading: CircleAvatar(
+                                              radius: 18,
+                                              backgroundColor: photoUrl.isEmpty
+                                                  ? _getInitialsBgColor(displayName)
+                                                  : null,
+                                              backgroundImage: photoUrl.isNotEmpty
+                                                  ? NetworkImage(photoUrl)
+                                                  : null,
+                                              child: photoUrl.isEmpty
+                                                  ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))
+                                                  : null,
+                                            ),
+                                            title: Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                            subtitle: Text('@${profile.userName}', style: const TextStyle(fontSize: 12)),
+                                            trailing: const Icon(Icons.arrow_forward_ios, size: 12),
+                                          ),
+                                          if (!isLast)
+                                            Divider(
+                                              height: 1,
+                                              indent: 16,
+                                              color: theme.colorScheme.outlineVariant.withAlpha(80),
+                                            ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
