@@ -256,6 +256,46 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                     child: Column(
                       children: [
                         SettingItem(
+                          icon: HugeIconsStroke.passport,
+                          title: 'Workspace Info',
+                          isSelected: activeSettingsPanel == SettingsPanelType.workspaceInfo && isDesktop,
+                          trailing: Icon(
+                            HugeIconsStroke.arrowRight01,
+                            color: activeSettingsPanel == SettingsPanelType.workspaceInfo && isDesktop
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            ref.read(activeSettingsPanelProvider.notifier).state =
+                                SettingsPanelType.workspaceInfo;
+                            if (isDesktop) {
+                              ref.read(activeChatSessionProvider.notifier).state =
+                                  const ActiveChatSession();
+                            }
+                          },
+                        ),
+                        SettingItem(
+                          icon: HugeIconsStroke.userGroup,
+                          title: 'Users & User Groups',
+                          isSelected: activeSettingsPanel == SettingsPanelType.usersAndGroups && isDesktop,
+                          trailing: Icon(
+                            HugeIconsStroke.arrowRight01,
+                            color: activeSettingsPanel == SettingsPanelType.usersAndGroups && isDesktop
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            ref.read(activeSettingsPanelProvider.notifier).state =
+                                SettingsPanelType.usersAndGroups;
+                            if (isDesktop) {
+                              ref.read(activeChatSessionProvider.notifier).state =
+                                  const ActiveChatSession();
+                            }
+                          },
+                        ),
+                        SettingItem(
                           icon: HugeIconsStroke.hashtag,
                           title: 'Add Workspace',
                           trailing: Icon(

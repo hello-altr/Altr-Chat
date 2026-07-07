@@ -20,6 +20,8 @@ import 'package:chat/pages/channels_page.dart';
 import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
+import 'package:chat/pages/workspace_info.dart';
+import 'package:chat/pages/user_page.dart';
 
 class DesktopShell extends ConsumerStatefulWidget {
   const DesktopShell({super.key});
@@ -138,6 +140,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
       2 => switch (activeSettingsPanel) {
           SettingsPanelType.profile => const ProfileCardInspector(),
           SettingsPanelType.appearance => const AppearanceSettingsPanel(),
+          SettingsPanelType.workspaceInfo => const WorkspaceInfoPage(),
+          SettingsPanelType.usersAndGroups => const UsersAndGroupsPage(),
           SettingsPanelType.none => Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420.0),

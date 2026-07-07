@@ -18,6 +18,8 @@ import 'package:chat/pages/channels_page.dart';
 import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
+import 'package:chat/pages/workspace_info.dart';
+import 'package:chat/pages/user_page.dart';
 
 class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key});
@@ -110,6 +112,18 @@ class _MobileShellState extends ConsumerState<MobileShell> {
           if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.appearance)
             const Positioned.fill(
               child: AppearanceSettingsPanel(),
+            ),
+
+          // Layer 2.7: Workspace Info full-screen stack overlay
+          if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.workspaceInfo)
+            const Positioned.fill(
+              child: WorkspaceInfoPage(),
+            ),
+
+          // Layer 2.8: Users and User Groups full-screen stack overlay
+          if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.usersAndGroups)
+            const Positioned.fill(
+              child: UsersAndGroupsPage(),
             ),
 
           // Layer 3: Main Navigation Pill (Only visible when overlay slide layer is detached)
