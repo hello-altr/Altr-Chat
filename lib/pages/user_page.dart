@@ -18,18 +18,37 @@ class UsersAndGroupsPage extends ConsumerStatefulWidget {
   ConsumerState<UsersAndGroupsPage> createState() => _UsersAndGroupsPageState();
 }
 
-class _UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
+  late PageController _pageController;
+  late TextEditingController _userSearchController;
+  late TextEditingController _groupSearchController;
+  int _currentPage = 0;
+  String _userSearchQuery = '';
+  String _groupSearchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _pageController = PageController(initialPage: 0);
+    _userSearchController = TextEditingController();
+    _userSearchController.addListener(() {
+      setState(() {
+        _userSearchQuery = _userSearchController.text;
+      });
+    });
+    _groupSearchController = TextEditingController();
+    _groupSearchController.addListener(() {
+      setState(() {
+        _groupSearchQuery = _groupSearchController.text;
+      });
+    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _pageController.dispose();
+    _userSearchController.dispose();
+    _groupSearchController.dispose();
     super.dispose();
   }
 
@@ -501,6 +520,156 @@ class _UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> with Si
     }
   }
 
+  Widget _buildFloatingPill(ThemeData theme) {
+    return Center(
+      child: Container(
+        width: 280,
+        height: 40,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHigh.withAlpha(200),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withAlpha(30),
+            width: 0.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(10),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _currentPage = 0);
+                  _pageController.animateToPage(
+                    0,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.fastOutSlowIn,
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  decoration: BoxDecoration(
+                    color: _currentPage == 0
+                        ? theme.colorScheme.primaryContainer
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _currentPage == 0 ? HugeIconsSolid.user : HugeIconsStroke.user,
+                        size: 14,
+                        color: _currentPage == 0
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Users',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: _currentPage == 0
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _currentPage = 1);
+                  _pageController.animateToPage(
+                    1,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.fastOutSlowIn,
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  decoration: BoxDecoration(
+                    color: _currentPage == 1
+                        ? theme.colorScheme.primaryContainer
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _currentPage == 1 ? HugeIconsSolid.userGroup : HugeIconsStroke.userGroup,
+                        size: 14,
+                        color: _currentPage == 1
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Groups',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: _currentPage == 1
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(
+    BuildContext context, {
+    required TextEditingController controller,
+    required String hintText,
+    required VoidCallback onClear,
+  }) {
+    final theme = Theme.of(context);
+    return TextField(
+      controller: controller,
+      style: theme.textTheme.bodyMedium,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant.withAlpha(160),
+        ),
+        prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurfaceVariant, size: 20),
+        suffixIcon: controller.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: onClear,
+              )
+            : null,
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHigh.withAlpha(120),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -556,171 +725,187 @@ class _UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> with Si
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: theme.colorScheme.primary,
-          unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-          indicatorColor: theme.colorScheme.primary,
-          tabs: const [
-            Tab(text: 'Users', icon: Icon(HugeIconsStroke.user, size: 20)),
-            Tab(text: 'User Groups', icon: Icon(HugeIconsStroke.userGroup, size: 20)),
-          ],
-        ),
       ),
       body: SafeArea(
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 600),
-            padding: const EdgeInsets.only(bottom: 90),
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // TAB 1: USERS
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('users')
-                      .where('user_id', whereIn: workspaceMembers.isEmpty ? [''] : workspaceMembers)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+        child: Container(
+          padding: const EdgeInsets.only(bottom: 90),
+          child: Column(
+            children: [
+                const SizedBox(height: 12),
+                _buildFloatingPill(theme),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentPage = index;
+                      });
+                    },
+                    children: [
+                      // PAGE 1: USERS
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .where('user_id', whereIn: workspaceMembers.isEmpty ? [''] : workspaceMembers)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return Center(child: Text('Error: ${snapshot.error}'));
+                          }
+                          if (!snapshot.hasData) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
 
-                    final users = snapshot.data!.docs;
+                          final users = snapshot.data!.docs;
 
-                    if (users.isEmpty) {
-                      return const Center(child: Text('No users in this workspace.'));
-                    }
+                          if (users.isEmpty) {
+                            return const Center(child: Text('No users in this workspace.'));
+                          }
 
-                    return ListView.builder(
-                      itemCount: users.length,
-                      itemBuilder: (context, index) {
-                        final userData = users[index].data() as Map<String, dynamic>;
-                        final userId = userData['user_id'] ?? '';
-                        final displayName = userData['display_name'] ?? 'Aero User';
-                        final photoUrl = userData['photo_url'] as String?;
-                        final handle = userData['user_name'] ?? 'user';
-                        final isThisUserCreator = userId == creatorId;
-                        final isThisUserManager = managers.contains(userId) || isThisUserCreator;
+                          final totalUserCount = users.length;
+                          final filteredUsers = users.where((doc) {
+                            final userData = doc.data() as Map<String, dynamic>;
+                            final displayName = (userData['display_name'] ?? '').toString().toLowerCase();
+                            final handle = (userData['user_name'] ?? '').toString().toLowerCase();
+                            final query = _userSearchQuery.toLowerCase();
+                            return displayName.contains(query) || handle.contains(query);
+                          }).toList();
 
-                        final initials = displayName.isNotEmpty
-                            ? displayName[0].toUpperCase()
-                            : 'A';
-
-                        return ListTile(
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: photoUrl == null || photoUrl.isEmpty
-                                ? _getInitialsBgColor(displayName)
-                                : null,
-                            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                                ? NetworkImage(photoUrl)
-                                : null,
-                            child: photoUrl == null || photoUrl.isEmpty
-                                ? Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
-                                : null,
-                          ),
-                          title: Row(
+                           return Column(
                             children: [
-                              Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 6),
-                              if (isThisUserCreator)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text('Admin', style: TextStyle(fontSize: 8, color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
-                                )
-                              else if (isThisUserManager)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.secondaryContainer,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text('Manager', style: TextStyle(fontSize: 8, color: theme.colorScheme.secondary, fontWeight: FontWeight.bold)),
-                                )
-                            ],
-                          ),
-                          subtitle: Text('@$handle'),
-                          trailing: PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert),
-                            onSelected: (action) {
-                              if (action == 'dm') {
-                                _dmUser(context, userId, displayName);
-                              } else if (action == 'remove') {
-                                _removeUser(context, workspaceId, userId, displayName);
-                              } else if (action == 'promote') {
-                                _promoteUser(context, workspaceId, userId, displayName);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'dm',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.chat_bubble_outline, size: 18),
-                                    SizedBox(width: 8),
-                                    Text('Send DM'),
-                                  ],
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                child: _buildSearchBar(
+                                  context,
+                                  controller: _userSearchController,
+                                  hintText: 'Search $totalUserCount users',
+                                  onClear: () {
+                                    _userSearchController.clear();
+                                  },
                                 ),
                               ),
-                              if (isManager && userId != currentUserId && !isThisUserCreator) ...[
-                                const PopupMenuItem(
-                                  value: 'promote',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.shield, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Promote to Manager'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'remove',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.person_remove, size: 18, color: Colors.red),
-                                      SizedBox(width: 8),
-                                      Text('Remove User', style: TextStyle(color: Colors.red)),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                              Expanded(
+                                child: filteredUsers.isEmpty
+                                    ? const Center(child: Text('No matching users found.'))
+                                    : ListView.builder(
+                                        itemCount: filteredUsers.length,
+                                        itemBuilder: (context, index) {
+                                          final userData = filteredUsers[index].data() as Map<String, dynamic>;
+                                          final userId = userData['user_id'] ?? '';
+                                          final displayName = userData['display_name'] ?? 'Aero User';
+                                          final photoUrl = userData['photo_url'] as String?;
+                                          final handle = userData['user_name'] ?? 'user';
+                                          final isThisUserCreator = userId == creatorId;
+                                          final isThisUserManager = managers.contains(userId) || isThisUserCreator;
 
-                // TAB 2: USER GROUPS
-                Column(
-                  children: [
-                    if (isManager) ...[
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: ElevatedButton.icon(
-                          onPressed: () => _createNewGroup(context, workspaceId),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create User Group'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
+                                          final initials = displayName.isNotEmpty
+                                              ? displayName[0].toUpperCase()
+                                              : 'A';
+
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                                            child: ListTile(
+                                              onTap: () => _dmUser(context, userId, displayName),
+                                              hoverColor: theme.colorScheme.primary.withAlpha(20),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              leading: CircleAvatar(
+                                                radius: 20,
+                                                backgroundColor: photoUrl == null || photoUrl.isEmpty
+                                                    ? _getInitialsBgColor(displayName)
+                                                    : null,
+                                                backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                                                    ? NetworkImage(photoUrl)
+                                                    : null,
+                                                child: photoUrl == null || photoUrl.isEmpty
+                                                    ? Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                                                    : null,
+                                              ),
+                                              title: Row(
+                                                children: [
+                                                  Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                  const SizedBox(width: 6),
+                                                  if (isThisUserCreator)
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: theme.colorScheme.primaryContainer,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text('Admin', style: TextStyle(fontSize: 8, color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                                                    )
+                                                  else if (isThisUserManager)
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: theme.colorScheme.secondaryContainer,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text('Manager', style: TextStyle(fontSize: 8, color: theme.colorScheme.secondary, fontWeight: FontWeight.bold)),
+                                                    )
+                                                ],
+                                              ),
+                                              subtitle: Text('@$handle'),
+                                              trailing: PopupMenuButton<String>(
+                                                icon: const Icon(Icons.more_vert),
+                                                onSelected: (action) {
+                                                  if (action == 'dm') {
+                                                    _dmUser(context, userId, displayName);
+                                                  } else if (action == 'remove') {
+                                                    _removeUser(context, workspaceId, userId, displayName);
+                                                  } else if (action == 'promote') {
+                                                    _promoteUser(context, workspaceId, userId, displayName);
+                                                  }
+                                                },
+                                                itemBuilder: (context) => [
+                                                  const PopupMenuItem(
+                                                    value: 'dm',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.chat_bubble_outline, size: 18),
+                                                        SizedBox(width: 8),
+                                                        Text('Send DM'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  if (isManager && userId != currentUserId && !isThisUserCreator) ...[
+                                                    const PopupMenuItem(
+                                                      value: 'promote',
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(Icons.shield, size: 18),
+                                                          SizedBox(width: 8),
+                                                          Text('Promote to Manager'),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const PopupMenuItem(
+                                                      value: 'remove',
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(Icons.person_remove, size: 18, color: Colors.red),
+                                                          SizedBox(width: 8),
+                                                          Text('Remove User', style: TextStyle(color: Colors.red)),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ],
-                    Expanded(
-                      child: StreamBuilder<QuerySnapshot>(
+
+                      // PAGE 2: USER GROUPS
+                      StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
                             .collection('chat')
                             .doc(workspaceId)
@@ -735,114 +920,183 @@ class _UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> with Si
                           }
 
                           final groups = snapshot.data!.docs;
+                          final totalGroupCount = groups.length;
+                          final filteredGroups = groups.where((doc) {
+                            final groupData = doc.data() as Map<String, dynamic>;
+                            final name = (groupData['name'] ?? '').toString().toLowerCase();
+                            final handle = (groupData['handle'] ?? '').toString().toLowerCase();
+                            final query = _groupSearchQuery.toLowerCase();
+                            return name.contains(query) || handle.contains(query);
+                          }).toList();
 
-                          if (groups.isEmpty) {
-                            return const Center(
-                              child: Text('No user groups created yet.'),
-                            );
-                          }
-
-                          return ListView.builder(
-                            itemCount: groups.length,
-                            itemBuilder: (context, index) {
-                              final groupDoc = groups[index];
-                              final groupData = groupDoc.data() as Map<String, dynamic>;
-                              final name = groupData['name'] ?? 'Unnamed Group';
-                              final handle = groupData['handle'] ?? 'group';
-                              final groupId = groupData['id'] ?? '';
-                              final isPromoted = groupData['is_promoted'] == true;
-
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: theme.colorScheme.primaryContainer,
-                                  child: Icon(
-                                    HugeIconsStroke.userGroup,
-                                    color: theme.colorScheme.primary,
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Row(
-                                  children: [
-                                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    if (isPromoted) ...[
-                                      const SizedBox(width: 6),
-                                      Icon(Icons.star, color: Colors.amber[600], size: 14),
+                          return Column(
+                            children: [
+                              if (groups.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildSearchBar(
+                                          context,
+                                          controller: _groupSearchController,
+                                          hintText: 'Search $totalGroupCount user groups',
+                                          onClear: () {
+                                            _groupSearchController.clear();
+                                          },
+                                        ),
+                                      ),
+                                      if (isManager) ...[
+                                        const SizedBox(width: 12),
+                                        ElevatedButton.icon(
+                                          onPressed: () => _createNewGroup(context, workspaceId),
+                                          icon: const Icon(Icons.add, size: 16),
+                                          label: const Text('Create Group'),
+                                          style: ElevatedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
-                                ),
-                                subtitle: Text('@$handle'),
-                                trailing: PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert),
-                                  onSelected: (action) {
-                                    if (action == 'view') {
-                                      _viewGroupDetails(context, workspaceId, groupData);
-                                    } else if (action == 'add_user') {
-                                      _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
-                                    } else if (action == 'promote') {
-                                      _promoteGroup(context, workspaceId, groupData);
-                                    } else if (action == 'delete') {
-                                      _deleteGroup(context, workspaceId, groupId, name);
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'view',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.visibility_outlined, size: 18),
-                                          SizedBox(width: 8),
-                                          Text('View Group Details'),
-                                        ],
+                                  ),
+                                )
+                              else if (isManager)
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _createNewGroup(context, workspaceId),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Create User Group'),
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize: const Size.fromHeight(48),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    if (isManager) ...[
-                                      const PopupMenuItem(
-                                        value: 'add_user',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.person_add_alt_1_outlined, size: 18),
-                                            SizedBox(width: 8),
-                                            Text('Add Member'),
-                                          ],
-                                        ),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'promote',
-                                        child: Row(
-                                          children: [
-                                            Icon(isPromoted ? Icons.star_border : Icons.star, size: 18),
-                                            const SizedBox(width: 8),
-                                            Text(isPromoted ? 'Demote Group' : 'Promote Group'),
-                                          ],
-                                        ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'delete',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                                            SizedBox(width: 8),
-                                            Text('Delete Group', style: TextStyle(color: Colors.red)),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                  ),
                                 ),
-                              );
-                            },
+                              Expanded(
+                                child: groups.isEmpty
+                                    ? const Center(child: Text('No user groups created yet.'))
+                                    : filteredGroups.isEmpty
+                                        ? const Center(child: Text('No matching user groups found.'))
+                                        : ListView.builder(
+                                            itemCount: filteredGroups.length,
+                                            itemBuilder: (context, index) {
+                                              final groupDoc = filteredGroups[index];
+                                              final groupData = groupDoc.data() as Map<String, dynamic>;
+                                              final name = groupData['name'] ?? 'Unnamed Group';
+                                              final handle = groupData['handle'] ?? 'group';
+                                              final groupId = groupData['id'] ?? '';
+                                              final isPromoted = groupData['is_promoted'] == true;
+
+                                              return Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                                                child: ListTile(
+                                                  onTap: () => _viewGroupDetails(context, workspaceId, groupData),
+                                                  hoverColor: theme.colorScheme.primary.withAlpha(20),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  leading: CircleAvatar(
+                                                    radius: 20,
+                                                    backgroundColor: theme.colorScheme.primaryContainer,
+                                                    child: Icon(
+                                                      HugeIconsStroke.userGroup,
+                                                      color: theme.colorScheme.primary,
+                                                      size: 20,
+                                                    ),
+                                                  ),
+                                                  title: Row(
+                                                    children: [
+                                                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                      if (isPromoted) ...[
+                                                        const SizedBox(width: 6),
+                                                        Icon(Icons.star, color: Colors.amber[600], size: 14),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                  subtitle: Text('@$handle'),
+                                                  trailing: PopupMenuButton<String>(
+                                                    icon: const Icon(Icons.more_vert),
+                                                    onSelected: (action) {
+                                                      if (action == 'view') {
+                                                        _viewGroupDetails(context, workspaceId, groupData);
+                                                      } else if (action == 'add_user') {
+                                                        _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
+                                                      } else if (action == 'promote') {
+                                                        _promoteGroup(context, workspaceId, groupData);
+                                                      } else if (action == 'delete') {
+                                                        _deleteGroup(context, workspaceId, groupId, name);
+                                                      }
+                                                    },
+                                                    itemBuilder: (context) => [
+                                                      const PopupMenuItem(
+                                                        value: 'view',
+                                                        child: Row(
+                                                          children: [
+                                                            Icon(Icons.visibility_outlined, size: 18),
+                                                            SizedBox(width: 8),
+                                                            Text('View Group Details'),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      if (isManager) ...[
+                                                        const PopupMenuItem(
+                                                          value: 'add_user',
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(Icons.person_add_alt_1_outlined, size: 18),
+                                                              SizedBox(width: 8),
+                                                              Text('Add Member'),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        PopupMenuItem(
+                                                          value: 'promote',
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(isPromoted ? Icons.star_border : Icons.star, size: 18),
+                                                              const SizedBox(width: 8),
+                                                              Text(isPromoted ? 'Demote Group' : 'Promote Group'),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const PopupMenuItem(
+                                                          value: 'delete',
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                                              SizedBox(width: 8),
+                                                              Text('Delete Group', style: TextStyle(color: Colors.red)),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                              ),
+                            ],
                           );
                         },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
+
+class _UsersAndGroupsPageState extends UsersAndGroupsPageState {}
+
