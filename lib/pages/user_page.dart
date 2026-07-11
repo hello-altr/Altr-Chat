@@ -338,8 +338,16 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                         backgroundColor: _getInitialsBgColor(displayName),
                         child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white)),
                       ),
-                      title: Text(displayName),
-                      subtitle: Text('@$handle'),
+                      title: Text(
+                        displayName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      subtitle: Text(
+                        '@$handle',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                       onTap: () async {
                         try {
                           await FirebaseFirestore.instance
@@ -785,7 +793,14 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                                   ),
                                                   title: Row(
                                                     children: [
-                                                      Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                      Flexible(
+                                                        child: Text(
+                                                          displayName,
+                                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                                          overflow: TextOverflow.ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                      ),
                                                       const SizedBox(width: 6),
                                                       if (isThisUserCreator)
                                                         Container(
@@ -807,7 +822,11 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                                         )
                                                     ],
                                                   ),
-                                                  subtitle: Text('@$handle'),
+                                                  subtitle: Text(
+                                                    '@$handle',
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
                                                   trailing: PopupMenuButton<String>(
                                                     icon: const Icon(Icons.more_vert),
                                                     onSelected: (action) {
@@ -981,14 +1000,25 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                                       ),
                                                       title: Row(
                                                         children: [
-                                                          Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                          Flexible(
+                                                            child: Text(
+                                                              name,
+                                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                                              overflow: TextOverflow.ellipsis,
+                                                              maxLines: 1,
+                                                            ),
+                                                          ),
                                                           if (isPromoted) ...[
                                                             const SizedBox(width: 6),
                                                             Icon(Icons.star, color: Colors.amber[600], size: 14),
                                                           ],
                                                         ],
                                                       ),
-                                                      subtitle: Text('@$handle'),
+                                                      subtitle: Text(
+                                                        '@$handle',
+                                                        overflow: TextOverflow.ellipsis,
+                                                        maxLines: 1,
+                                                      ),
                                                       trailing: PopupMenuButton<String>(
                                                         icon: const Icon(Icons.more_vert),
                                                         onSelected: (action) {
@@ -1181,6 +1211,8 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                             const SizedBox(height: 16),
                             Text(
                               displayName,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                               style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w900,
                               ),
@@ -1188,6 +1220,8 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                             const SizedBox(height: 4),
                             Text(
                               '@$handle',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w600,
@@ -1384,10 +1418,14 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  name,
-                                  style: theme.textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w900,
+                                Flexible(
+                                  child: Text(
+                                    name,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: theme.textTheme.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
                                 ),
                                 if (isPromoted) ...[
@@ -1399,6 +1437,8 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                             const SizedBox(height: 4),
                             Text(
                               '@$handle',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w600,
@@ -1544,8 +1584,18 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                                   ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))
                                                   : null,
                                             ),
-                                            title: Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                            subtitle: Text('@${profile.userName}', style: const TextStyle(fontSize: 12)),
+                                            title: Text(
+                                              displayName,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                            subtitle: Text(
+                                              '@${profile.userName}',
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              style: const TextStyle(fontSize: 12),
+                                            ),
                                             trailing: const Icon(Icons.arrow_forward_ios, size: 12),
                                           ),
                                           if (!isLast)
