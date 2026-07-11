@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
+import 'package:chat/providers/nav_provider.dart';
 import 'package:chat/enums/layout_mode.dart';
 import 'package:chat/repositories/chat_repository.dart';
 
@@ -73,6 +75,9 @@ class SidebarItemTile extends ConsumerWidget {
           }
           
           onTap();
+        },
+        onLongPress: () {
+          _showTileContextMenu(context, ref);
         },
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
@@ -156,6 +161,61 @@ class SidebarItemTile extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showTileContextMenu(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isChannel = title.startsWith('#');
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('Get Info'),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (isChannel) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Channel Info: $title')),
+                    );
+                  } else {
+                    final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+                    final parts = id.split('_');
+                    final counterpartId = parts.firstWhere(
+                      (uid) => uid != currentUserId,
+                      orElse: () => currentUserId,
+                    );
+                    ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
+                    ref.read(navIndexProvider.notifier).state = 2;
+                    ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 }

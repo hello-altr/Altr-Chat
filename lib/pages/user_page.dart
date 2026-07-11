@@ -82,9 +82,9 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
 
     try {
       final dmRef = FirebaseFirestore.instance
-          .collection('chat')
+          .collection('workspaces')
           .doc(activeWorkspaceId)
-          .collection('DMs')
+          .collection('dms')
           .doc(dmId);
 
       final dmDoc = await dmRef.get();

@@ -40,6 +40,12 @@ void main() async {
   }
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Configure Firestore offline persistence/local cache settings
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
+
   final prefs = await SharedPreferences.getInstance();
 
   final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;

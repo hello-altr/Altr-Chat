@@ -7,6 +7,8 @@ import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
+import 'package:chat/providers/nav_provider.dart';
 import 'package:chat/repositories/chat_repository.dart';
 
 // Enums
@@ -87,17 +89,14 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
       final channelAsync = ref.watch(activeChannelProvider(activeId));
       titleText = channelAsync.value?.name ?? activeId;
     } else {
-      final dmAsync = ref.watch(activeDmProvider(activeId));
-      final dm = dmAsync.value;
-      if (dm != null) {
-        final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
-        final counterpartId = dm.participants.firstWhere(
-          (id) => id != currentUserId,
-          orElse: () => currentUserId,
-        );
-        final profileAsync = ref.watch(userProfileByIdProvider(counterpartId));
-        titleText = profileAsync.value?.displayName ?? 'Loading...';
-      }
+      final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
+      final parts = activeId.split('_');
+      final counterpartId = parts.firstWhere(
+        (id) => id != currentUserId,
+        orElse: () => currentUserId,
+      );
+      final profileAsync = ref.watch(userProfileByIdProvider(counterpartId));
+      titleText = profileAsync.value?.displayName ?? 'Loading...';
     }
 
     return Scaffold(
@@ -112,44 +111,60 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
                 },
               )
             : null,
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: theme.colorScheme.primaryContainer,
+        title: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: isChannel
+              ? null
+              : () {
+                  final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+                  final parts = activeId.split('_');
+                  final counterpartId = parts.firstWhere(
+                    (id) => id != currentUserId,
+                    orElse: () => currentUserId,
+                  );
+                  ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
+                  ref.read(navIndexProvider.notifier).state = 2;
+                  ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+                },
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primaryContainer,
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  isChannel ? HugeIconsStroke.hashtag : HugeIconsStroke.user,
+                  color: theme.colorScheme.primary,
+                  size: 18,
+                ),
               ),
-              alignment: Alignment.center,
-              child: Icon(
-                isChannel ? HugeIconsStroke.hashtag : HugeIconsStroke.user,
-                color: theme.colorScheme.primary,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$prefix$titleText',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$prefix$titleText',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    isChannel ? 'channel space' : 'direct message',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    Text(
+                      isChannel ? 'channel space' : 'direct message',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         actions: [
@@ -159,7 +174,23 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
           ),
           IconButton(
             icon: const Icon(HugeIconsStroke.informationCircle),
-            onPressed: () {},
+            onPressed: () {
+              if (isChannel) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Channel Info: $titleText')),
+                );
+              } else {
+                final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+                final parts = activeId.split('_');
+                final counterpartId = parts.firstWhere(
+                  (id) => id != currentUserId,
+                  orElse: () => currentUserId,
+                );
+                ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
+                ref.read(navIndexProvider.notifier).state = 2;
+                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+              }
+            },
           ),
         ],
       ),

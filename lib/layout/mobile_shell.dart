@@ -123,7 +123,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
               ),
   
             // Layer 2.5: Profile full-screen stack overlay
-            if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.profile)
+            if (activeSettingsPanel == SettingsPanelType.profile)
               const Positioned.fill(
                 child: ProfileCardInspector(),
               ),

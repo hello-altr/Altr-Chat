@@ -7,6 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
+import 'package:chat/repositories/chat_repository.dart';
+import 'package:chat/models/user_model.dart';
 import 'package:chat/enums/layout_mode.dart';
 
 // Reusable Widgets
@@ -40,22 +42,30 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
     final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
 
     final currentUser = FirebaseAuth.instance.currentUser;
-    final userProfile = ref.watch(userProfileProvider).value;
+    final targetUserId = ref.watch(profileTargetUserIdProvider);
+    final isMe = targetUserId == null || targetUserId == (currentUser?.uid ?? '');
+
+    final AltrUser? profileUser;
+    if (isMe) {
+      profileUser = ref.watch(userProfileProvider).value;
+    } else {
+      profileUser = ref.watch(userProfileByIdProvider(targetUserId)).value;
+    }
 
     final displayName =
-        userProfile?.displayName ?? currentUser?.displayName ?? 'Aero User';
+        profileUser?.displayName ?? (isMe ? (currentUser?.displayName ?? 'Aero User') : 'Aero User');
     final emailId =
-        userProfile?.emailId ?? currentUser?.email ?? 'user@helloaltr.com';
-    final photoUrl = userProfile?.photoUrl.isNotEmpty == true
-        ? userProfile!.photoUrl
-        : currentUser?.photoURL;
+        profileUser?.emailId ?? (isMe ? (currentUser?.email ?? 'user@helloaltr.com') : 'user@helloaltr.com');
+    final photoUrl = profileUser?.photoUrl.isNotEmpty == true
+        ? profileUser!.photoUrl
+        : (isMe ? currentUser?.photoURL : null);
     final initials = displayName.isNotEmpty
         ? displayName[0].toUpperCase()
         : 'A';
     final usernameHandle =
-        userProfile?.userName != null && userProfile!.userName.isNotEmpty
-        ? '@${userProfile.userName}'
-        : (currentUser?.email != null
+        profileUser?.userName != null && profileUser!.userName.isNotEmpty
+        ? '@${profileUser.userName}'
+        : (isMe && currentUser?.email != null
               ? '@${currentUser!.email!.split("@")[0]}'
               : '@aero_user');
 
@@ -75,7 +85,7 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                 },
               ),
               title: Text(
-                'Profile',
+                isMe ? 'Profile' : "$displayName's Profile",
                 style: TextStyle(
                   color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
@@ -165,22 +175,24 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                   // Quick Actions Row with even widths and even spacing
                   Row(
                     children: [
-                      Expanded(
-                        child: ActionButton(
-                          icon: HugeIconsStroke.image02,
-                          label: 'Change Photo',
-                          onTap: () {},
+                      if (isMe) ...[
+                        Expanded(
+                          child: ActionButton(
+                            icon: HugeIconsStroke.image02,
+                            label: 'Change Photo',
+                            onTap: () {},
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ActionButton(
-                          icon: HugeIconsStroke.edit01,
-                          label: 'Edit Info',
-                          onTap: () {},
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ActionButton(
+                            icon: HugeIconsStroke.edit01,
+                            label: 'Edit Info',
+                            onTap: () {},
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: ActionButton(
                           icon: HugeIconsStroke.share01,
@@ -225,99 +237,101 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Notification Panel
-                  const SectionHeader(
-                    title: 'Notification Panel (Slack Activity Style)',
-                    fontSize: 11.0,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      SettingsFilterChip(
-                        label: 'All',
-                        isSelected: selectedFilter == 'all',
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              selectedFilter = 'all';
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      SettingsFilterChip(
-                        label: 'Mentions',
-                        isSelected: selectedFilter == 'mentions',
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              selectedFilter = 'mentions';
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      SettingsFilterChip(
-                        label: 'Registrations',
-                        isSelected: selectedFilter == 'registrations',
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              selectedFilter = 'registrations';
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Grouped Notification Container (iOS settings style)
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant.withAlpha(80),
-                      ),
+                  // Notification Panel (only show if isMe is true)
+                  if (isMe) ...[
+                    const SectionHeader(
+                      title: 'Notification Panel (Slack Activity Style)',
+                      fontSize: 11.0,
                     ),
-                    child: filteredNotifs.isEmpty
-                        ? EmptyStateWidget(
-                            icon: HugeIconsStroke.notification01,
-                            title: "No notifications",
-                            subtitle: selectedFilter != 'all'
-                                ? "No activities found in the '$selectedFilter' category."
-                                : "You are all caught up! No notifications yet.",
-                            onActionPressed: selectedFilter != 'all'
-                                ? () {
-                                    setState(() {
-                                      selectedFilter = 'all';
-                                    });
-                                  }
-                                : null,
-                            actionLabel: selectedFilter != 'all'
-                                ? "Show all"
-                                : null,
-                          )
-                        : Column(
-                            children: filteredNotifs.map((notif) {
-                              final isLast = filteredNotifs.last == notif;
-                              return Column(
-                                children: [
-                                  NotificationCard(notification: notif),
-                                  if (!isLast)
-                                    Divider(
-                                      height: 1,
-                                      indent: 16,
-                                      color: theme.colorScheme.outlineVariant
-                                          .withAlpha(80),
-                                    ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
-                  ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        SettingsFilterChip(
+                          label: 'All',
+                          isSelected: selectedFilter == 'all',
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                selectedFilter = 'all';
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        SettingsFilterChip(
+                          label: 'Mentions',
+                          isSelected: selectedFilter == 'mentions',
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                selectedFilter = 'mentions';
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        SettingsFilterChip(
+                          label: 'Registrations',
+                          isSelected: selectedFilter == 'registrations',
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                selectedFilter = 'registrations';
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Grouped Notification Container (iOS settings style)
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant.withAlpha(80),
+                        ),
+                      ),
+                      child: filteredNotifs.isEmpty
+                          ? EmptyStateWidget(
+                              icon: HugeIconsStroke.notification01,
+                              title: "No notifications",
+                              subtitle: selectedFilter != 'all'
+                                  ? "No activities found in the '$selectedFilter' category."
+                                  : "You are all caught up! No notifications yet.",
+                              onActionPressed: selectedFilter != 'all'
+                                  ? () {
+                                      setState(() {
+                                        selectedFilter = 'all';
+                                      });
+                                    }
+                                  : null,
+                              actionLabel: selectedFilter != 'all'
+                                  ? "Show all"
+                                  : null,
+                            )
+                          : Column(
+                              children: filteredNotifs.map((notif) {
+                                final isLast = filteredNotifs.last == notif;
+                                return Column(
+                                  children: [
+                                    NotificationCard(notification: notif),
+                                    if (!isLast)
+                                      Divider(
+                                        height: 1,
+                                        indent: 16,
+                                        color: theme.colorScheme.outlineVariant
+                                            .withAlpha(80),
+                                      ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                    ),
+                  ],
                 ],
               ),
             ),

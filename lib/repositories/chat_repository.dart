@@ -21,10 +21,9 @@ class ChatRepository {
 
   Stream<List<ChannelModel>> watchChannels(String workspaceId, String userId) {
     return _firestore
-        .collection('chat')
+        .collection('workspaces')
         .doc(workspaceId)
-        .collection('Channels')
-        .where('members', arrayContains: userId)
+        .collection('channels')
         .snapshots()
         .map((snapshot) {
       final list = snapshot.docs
@@ -38,9 +37,9 @@ class ChatRepository {
 
   Stream<List<DmModel>> watchDms(String workspaceId, String userId) {
     return _firestore
-        .collection('chat')
+        .collection('workspaces')
         .doc(workspaceId)
-        .collection('DMs')
+        .collection('dms')
         .where('participants', arrayContains: userId)
         .snapshots()
         .map((snapshot) {
@@ -161,9 +160,9 @@ final activeChannelProvider = StreamProvider.family<ChannelModel?, String>((ref,
   if (workspaceId == null) return Stream.value(null);
   
   return FirebaseFirestore.instance
-      .collection('chat')
+      .collection('workspaces')
       .doc(workspaceId)
-      .collection('Channels')
+      .collection('channels')
       .doc(channelId)
       .snapshots()
       .map((doc) => doc.exists ? ChannelModel.fromFirestore(doc) : null);
@@ -174,9 +173,9 @@ final activeDmProvider = StreamProvider.family<DmModel?, String>((ref, dmId) {
   if (workspaceId == null) return Stream.value(null);
   
   return FirebaseFirestore.instance
-      .collection('chat')
+      .collection('workspaces')
       .doc(workspaceId)
-      .collection('DMs')
+      .collection('dms')
       .doc(dmId)
       .snapshots()
       .map((doc) => doc.exists ? DmModel.fromFirestore(doc) : null);

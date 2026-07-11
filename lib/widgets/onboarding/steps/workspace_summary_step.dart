@@ -71,9 +71,9 @@ class _WorkspaceSummaryStepState extends ConsumerState<WorkspaceSummaryStep> {
 
       for (final channelName in widget.channels) {
         final channelRef = FirebaseFirestore.instance
-            .collection('chat')
+            .collection('workspaces')
             .doc(workspaceId)
-            .collection('Channels')
+            .collection('channels')
             .doc();
         batch.set(channelRef, {
           'name': channelName.replaceAll('#', ''),
