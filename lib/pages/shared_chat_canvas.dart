@@ -8,7 +8,6 @@ import 'package:chat/providers/chat_state_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/settings_provider.dart';
-import 'package:chat/providers/nav_provider.dart';
 import 'package:chat/repositories/chat_repository.dart';
 
 // Enums
@@ -123,7 +122,6 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
                     orElse: () => currentUserId,
                   );
                   ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
-                  ref.read(navIndexProvider.notifier).state = 2;
                   ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
                 },
           child: Row(
@@ -187,7 +185,6 @@ class _SharedChatCanvasState extends ConsumerState<SharedChatCanvas> {
                   orElse: () => currentUserId,
                 );
                 ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
-                ref.read(navIndexProvider.notifier).state = 2;
                 ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
               }
             },

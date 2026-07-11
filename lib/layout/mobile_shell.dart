@@ -1,5 +1,6 @@
 // Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Widgets
@@ -13,12 +14,13 @@ import 'package:chat/providers/nav_provider.dart';
 
 // Pages
 import 'package:chat/pages/shared_chat_canvas.dart';
+import 'package:chat/pages/notifications_page.dart';
 import 'package:chat/pages/appearance_page.dart';
+import 'package:chat/pages/workspace_info.dart';
 import 'package:chat/pages/channels_page.dart';
 import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
-import 'package:chat/pages/workspace_info.dart';
 import 'package:chat/pages/user_page.dart';
 
 class MobileShell extends ConsumerStatefulWidget {
@@ -50,6 +52,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
     final selectedIndex = ref.watch(navIndexProvider);
     final activeSettingsPanel = ref.watch(activeSettingsPanelProvider);
     final usersAndGroupsViewHistory = ref.watch(usersAndGroupsViewHistoryProvider);
+    final theme = Theme.of(context);
 
     // Listen for tab taps inside the FloatingNavPill to animate the PageView smoothly
     ref.listen<int>(navIndexProvider, (previous, next) {
@@ -104,12 +107,48 @@ class _MobileShellState extends ConsumerState<MobileShell> {
                 SettingsIndexHub(),      // Index 2
               ],
             ),
-            // Layer 1.5: Fixed Top-Right Workspace Switcher
             if (showNavPill)
               Positioned(
                 top: 12.0 + MediaQuery.of(context).padding.top,
                 right: 16.0,
-                child: const WorkspaceDropdownSwitcher(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        ref.read(activeSettingsPanelProvider.notifier).state =
+                            activeSettingsPanel == SettingsPanelType.notifications
+                                ? SettingsPanelType.none
+                                : SettingsPanelType.notifications;
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: activeSettingsPanel == SettingsPanelType.notifications
+                              ? theme.colorScheme.primaryContainer
+                              : theme.colorScheme.surfaceContainerHigh,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: activeSettingsPanel == SettingsPanelType.notifications
+                                ? theme.colorScheme.primary.withAlpha(100)
+                                : theme.colorScheme.outlineVariant.withAlpha(100),
+                          ),
+                        ),
+                        child: Icon(
+                          activeSettingsPanel == SettingsPanelType.notifications
+                              ? HugeIconsSolid.notification02
+                              : HugeIconsStroke.notification02,
+                          size: 22,
+                          color: activeSettingsPanel == SettingsPanelType.notifications
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const WorkspaceDropdownSwitcher(),
+                  ],
+                ),
               ),
   
             // Layer 2: RESPONSIVE FULL-BLEED ACTIVE OVERLAY
@@ -144,6 +183,12 @@ class _MobileShellState extends ConsumerState<MobileShell> {
             if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.usersAndGroups)
               const Positioned.fill(
                 child: UsersAndGroupsPage(),
+              ),
+
+            // Layer 2.9: Notifications full-screen stack overlay
+            if (activeSettingsPanel == SettingsPanelType.notifications)
+              const Positioned.fill(
+                child: NotificationsPanelPage(),
               ),
   
             // Layer 3: Main Navigation Pill (Only visible when overlay slide layer is detached)

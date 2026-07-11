@@ -52,7 +52,7 @@ class FloatingNavPill extends ConsumerWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(isDesktop ? 28 : 44),
               child: Container(
-                color: theme.colorScheme.surface,
+                color: theme.colorScheme.surfaceContainer,
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,

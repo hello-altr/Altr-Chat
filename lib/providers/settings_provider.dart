@@ -1,7 +1,7 @@
 // Packages
 import 'package:flutter_riverpod/legacy.dart';
 
-enum SettingsPanelType { none, profile, appearance, workspaceInfo, usersAndGroups }
+enum SettingsPanelType { none, profile, appearance, workspaceInfo, usersAndGroups, notifications }
 
 final activeSettingsPanelProvider = StateProvider<SettingsPanelType>((ref) => SettingsPanelType.none);
 

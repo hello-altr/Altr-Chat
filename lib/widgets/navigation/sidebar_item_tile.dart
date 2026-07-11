@@ -1,14 +1,20 @@
-import 'package:flutter/material.dart';
+// Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:chat/providers/auth_provider.dart';
-import 'package:chat/providers/layout_provider.dart';
+import 'package:material_ui/material_ui.dart';
+
+// Providers
 import 'package:chat/providers/settings_provider.dart';
-import 'package:chat/providers/nav_provider.dart';
-import 'package:chat/enums/layout_mode.dart';
+import 'package:chat/providers/layout_provider.dart';
+import 'package:chat/providers/auth_provider.dart';
+
+// Repositories
 import 'package:chat/repositories/chat_repository.dart';
 
-class SidebarItemTile extends ConsumerWidget {
+// Enums and Values
+import 'package:chat/enums/layout_mode.dart';
+
+class SidebarItemTile extends ConsumerStatefulWidget {
   final String id;
   final String title;
   final String subtitle;
@@ -31,7 +37,64 @@ class SidebarItemTile extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SidebarItemTile> createState() => _SidebarItemTileState();
+}
+
+class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
+  TapDownDetails? _tapDownDetails;
+
+  void _showPopupMenu(BuildContext context, WidgetRef ref) {
+    if (_tapDownDetails == null) return;
+    
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        _tapDownDetails!.globalPosition,
+        _tapDownDetails!.globalPosition,
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final isChannel = widget.title.startsWith('#');
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        PopupMenuItem<String>(
+          value: 'info',
+          child: Row(
+            children: const [
+              Icon(Icons.info_outline, size: 20),
+              SizedBox(width: 12),
+              Text('Get Info'),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (!context.mounted) return;
+      if (value == 'info') {
+        if (isChannel) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Channel Info: ${widget.title}')),
+          );
+        } else {
+          final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+          final parts = widget.id.split('_');
+          final counterpartId = parts.firstWhere(
+            (uid) => uid != currentUserId,
+            orElse: () => currentUserId,
+          );
+          ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
+          ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final layoutMode = ref.watch(layoutProvider);
     final isDesktop = layoutMode == LayoutMode.desktop;
@@ -42,180 +105,137 @@ class SidebarItemTile extends ConsumerWidget {
     final metaAsync = ref.watch(workspaceMetaProvider(activeWorkspaceId));
     
     bool isUnread = false;
-    if (lastMessageTime != null && !isSelected) {
+    if (widget.lastMessageTime != null && !widget.isSelected) {
       final metaData = metaAsync.value;
       final lastReadTimestamps = metaData?['last_read_timestamps'] as Map<String, dynamic>? ?? {};
-      final lastReadVal = lastReadTimestamps[id];
+      final lastReadVal = lastReadTimestamps[widget.id];
       
       if (lastReadVal == null) {
         isUnread = true;
       } else if (lastReadVal is Timestamp) {
         final lastReadDateTime = lastReadVal.toDate();
-        isUnread = lastMessageTime!.isAfter(lastReadDateTime);
+        isUnread = widget.lastMessageTime!.isAfter(lastReadDateTime);
       }
     }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
-      child: InkWell(
-        onTap: () {
-          // Banish badge immediately in Firestore
-          final authUser = ref.read(authStateProvider).value;
-          if (authUser != null && activeWorkspaceId.isNotEmpty) {
-            FirebaseFirestore.instance
-                .collection('users')
-                .doc(authUser.uid)
-                .collection('workspace_meta')
-                .doc(activeWorkspaceId)
-                .set({
-                  'last_read_timestamps': {
-                    id: FieldValue.serverTimestamp(),
-                  }
-                }, SetOptions(merge: true));
-          }
-          
-          onTap();
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (details) {
+          _tapDownDetails = details;
         },
-        onLongPress: () {
-          _showTileContextMenu(context, ref);
+        onSecondaryTapDown: (details) {
+          _tapDownDetails = details;
         },
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: isSelected && isDesktop
-                ? theme.colorScheme.primaryContainer.withAlpha(150)
-                : Colors.transparent,
-            border: Border.all(
-              color: isSelected && isDesktop
-                  ? theme.colorScheme.primary.withAlpha(80)
+        onSecondaryTap: () {
+          _showPopupMenu(context, ref);
+        },
+        child: InkWell(
+          onTap: () {
+            // Banish badge immediately in Firestore
+            final authUser = ref.read(authStateProvider).value;
+            if (authUser != null && activeWorkspaceId.isNotEmpty) {
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(authUser.uid)
+                  .collection('workspace_meta')
+                  .doc(activeWorkspaceId)
+                  .set({
+                    'last_read_timestamps': {
+                      widget.id: FieldValue.serverTimestamp(),
+                    }
+                  }, SetOptions(merge: true));
+            }
+            
+            widget.onTap();
+          },
+          onLongPress: () {
+            _showPopupMenu(context, ref);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: widget.isSelected && isDesktop
+                  ? theme.colorScheme.primaryContainer.withAlpha(150)
                   : Colors.transparent,
+              border: Border.all(
+                color: widget.isSelected && isDesktop
+                    ? theme.colorScheme.primary.withAlpha(80)
+                    : Colors.transparent,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              // Lead Icon
-              icon,
-              const SizedBox(width: 12),
-              
-              // Title and Subtitle Info block
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: isSelected && isDesktop
-                                  ? FontWeight.bold
-                                  : (isUnread ? FontWeight.bold : FontWeight.w600),
-                              color: theme.colorScheme.onSurface,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        // High-density unread indicator element (color badge mark dot) right adjacent to the label
-                        if (isUnread) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              shape: BoxShape.circle,
+            child: Row(
+              children: [
+                // Lead Icon
+                widget.icon,
+                const SizedBox(width: 12),
+                
+                // Title and Subtitle Info block
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.title,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: widget.isSelected && isDesktop
+                                    ? FontWeight.bold
+                                    : (isUnread ? FontWeight.bold : FontWeight.w600),
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          // High-density unread indicator element (color badge mark dot) right adjacent to the label
+                          if (isUnread) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
-                        fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
+                          fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              
-              // Time stamp details
-              Text(
-                time,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                  fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                const SizedBox(width: 12),
+                
+                // Time stamp details
+                Text(
+                  widget.time,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                    fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  void _showTileContextMenu(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isChannel = title.startsWith('#');
-    
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.info_outline),
-                title: const Text('Get Info'),
-                onTap: () {
-                  Navigator.pop(context);
-                  if (isChannel) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Channel Info: $title')),
-                    );
-                  } else {
-                    final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
-                    final parts = id.split('_');
-                    final counterpartId = parts.firstWhere(
-                      (uid) => uid != currentUserId,
-                      orElse: () => currentUserId,
-                    );
-                    ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
-                    ref.read(navIndexProvider.notifier).state = 2;
-                    ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
     );
   }
 }

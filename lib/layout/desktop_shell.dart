@@ -15,12 +15,13 @@ import 'package:chat/widgets/empty_state.dart';
 
 // Pages
 import 'package:chat/pages/shared_chat_canvas.dart';
+import 'package:chat/pages/notifications_page.dart';
 import 'package:chat/pages/appearance_page.dart';
+import 'package:chat/pages/workspace_info.dart';
 import 'package:chat/pages/channels_page.dart';
 import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
-import 'package:chat/pages/workspace_info.dart';
 import 'package:chat/pages/user_page.dart';
 
 class DesktopShell extends ConsumerStatefulWidget {
@@ -32,6 +33,7 @@ class DesktopShell extends ConsumerStatefulWidget {
 
 class _DesktopShellState extends ConsumerState<DesktopShell> {
   double _sidebarWidth = 400.0;
+  double _profileSidebarWidth = 350.0;
   late PageController _sidebarPageController;
 
   @override
@@ -142,6 +144,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
           SettingsPanelType.appearance => const AppearanceSettingsPanel(),
           SettingsPanelType.workspaceInfo => const WorkspaceInfoPage(),
           SettingsPanelType.usersAndGroups => const UsersAndGroupsPage(),
+          SettingsPanelType.notifications => const NotificationsPanelPage(),
           SettingsPanelType.none => Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420.0),
@@ -187,7 +190,47 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 Positioned(
                   top: 12.0 + MediaQuery.of(context).padding.top,
                   right: 16.0,
-                  child: const WorkspaceDropdownSwitcher(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          ref.read(activeSettingsPanelProvider.notifier).state =
+                              activeSettingsPanel == SettingsPanelType.notifications
+                                  ? SettingsPanelType.none
+                                  : SettingsPanelType.notifications;
+                        },
+                        child: Tooltip(
+                          message: 'Notifications',
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: activeSettingsPanel == SettingsPanelType.notifications
+                                  ? theme.colorScheme.primaryContainer
+                                  : theme.colorScheme.surfaceContainerHigh,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: activeSettingsPanel == SettingsPanelType.notifications
+                                    ? theme.colorScheme.primary.withAlpha(100)
+                                    : theme.colorScheme.outlineVariant.withAlpha(100),
+                              ),
+                            ),
+                            child: Icon(
+                              activeSettingsPanel == SettingsPanelType.notifications
+                                  ? HugeIconsSolid.notification02
+                                  : HugeIconsStroke.notification02,
+                              size: 22,
+                              color: activeSettingsPanel == SettingsPanelType.notifications
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const WorkspaceDropdownSwitcher(),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -206,29 +249,54 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
               child: Container(
                 width: 10,
                 color: Colors.transparent,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 1,
-                      color: theme.colorScheme.outlineVariant,
-                    ),
-                    Container(
-                      width: 4,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.onSurfaceVariant.withAlpha(100),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ],
+                alignment: Alignment.center,
+                child: Container(
+                  width: 1,
+                  color: theme.colorScheme.outlineVariant.withAlpha(120),
                 ),
               ),
             ),
           ),
 
           // Column 2: Central Context Communication Stage Canvas
-          Expanded(child: centralViewCanvas),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: centralViewCanvas),
+                if ((selectedIndex == 0 || selectedIndex == 1) &&
+                    (activeSettingsPanel == SettingsPanelType.profile ||
+                     activeSettingsPanel == SettingsPanelType.notifications)) ...[
+                  // Resize drag handle divider for profile/notifications sidebar
+                  GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onHorizontalDragUpdate: (details) {
+                      setState(() {
+                        _profileSidebarWidth = (_profileSidebarWidth - details.delta.dx).clamp(300.0, 500.0);
+                      });
+                    },
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.resizeColumn,
+                      child: Container(
+                        width: 10,
+                        color: Colors.transparent,
+                        alignment: Alignment.center,
+                        child: Container(
+                          width: 1,
+                          color: theme.colorScheme.outlineVariant.withAlpha(120),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: _profileSidebarWidth,
+                    child: activeSettingsPanel == SettingsPanelType.profile
+                        ? const ProfileCardInspector()
+                        : const NotificationsPanelPage(),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
