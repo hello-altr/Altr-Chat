@@ -26,31 +26,61 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     final selectedColor = appearance.accentSeedColor;
 
     Widget themeSelectionRow = Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
       children: [
-        ThemeModeOption(
-          mode: ThemeMode.system,
-          label: 'Auto',
-          isSelected: currentThemeMode == ThemeMode.system,
-          selectedColor: selectedColor,
-          isMobile: isMobile,
-        ),
+        isMobile
+            ? Expanded(
+                child: ThemeModeOption(
+                  mode: ThemeMode.system,
+                  label: 'Auto',
+                  isSelected: currentThemeMode == ThemeMode.system,
+                  selectedColor: selectedColor,
+                  isMobile: isMobile,
+                ),
+              )
+            : ThemeModeOption(
+                mode: ThemeMode.system,
+                label: 'Auto',
+                isSelected: currentThemeMode == ThemeMode.system,
+                selectedColor: selectedColor,
+                isMobile: isMobile,
+              ),
         const SizedBox(width: 16),
-        ThemeModeOption(
-          mode: ThemeMode.light,
-          label: 'Light',
-          isSelected: currentThemeMode == ThemeMode.light,
-          selectedColor: selectedColor,
-          isMobile: isMobile,
-        ),
+        isMobile
+            ? Expanded(
+                child: ThemeModeOption(
+                  mode: ThemeMode.light,
+                  label: 'Light',
+                  isSelected: currentThemeMode == ThemeMode.light,
+                  selectedColor: selectedColor,
+                  isMobile: isMobile,
+                ),
+              )
+            : ThemeModeOption(
+                mode: ThemeMode.light,
+                label: 'Light',
+                isSelected: currentThemeMode == ThemeMode.light,
+                selectedColor: selectedColor,
+                isMobile: isMobile,
+              ),
         const SizedBox(width: 16),
-        ThemeModeOption(
-          mode: ThemeMode.dark,
-          label: 'Dark',
-          isSelected: currentThemeMode == ThemeMode.dark,
-          selectedColor: selectedColor,
-          isMobile: isMobile,
-        ),
+        isMobile
+            ? Expanded(
+                child: ThemeModeOption(
+                  mode: ThemeMode.dark,
+                  label: 'Dark',
+                  isSelected: currentThemeMode == ThemeMode.dark,
+                  selectedColor: selectedColor,
+                  isMobile: isMobile,
+                ),
+              )
+            : ThemeModeOption(
+                mode: ThemeMode.dark,
+                label: 'Dark',
+                isSelected: currentThemeMode == ThemeMode.dark,
+                selectedColor: selectedColor,
+                isMobile: isMobile,
+              ),
       ],
     );
 
@@ -59,7 +89,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
       appearanceContent = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: themeSelectionRow),
+          themeSelectionRow,
         ],
       );
     } else {
@@ -84,42 +114,49 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           color: const Color(0xff096b5a),
           label: "Default",
           isSelected: selectedColor == const Color(0xff096b5a),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFF007AFF),
           label: "",
           isSelected: selectedColor == const Color(0xFF007AFF),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFF8E44AD),
           label: "",
           isSelected: selectedColor == const Color(0xFF8E44AD),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFFFF3B30),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF3B30),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFFFF9500),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF9500),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFFFFCC00),
           label: "",
           isSelected: selectedColor == const Color(0xFFFFCC00),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFF34C759),
           label: "",
           isSelected: selectedColor == const Color(0xFF34C759),
+          isMobile: false,
         ),
       ],
     );
@@ -132,36 +169,43 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           color: const Color(0xff096b5a),
           label: "Default",
           isSelected: selectedColor == const Color(0xff096b5a),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFF007AFF),
           label: "",
           isSelected: selectedColor == const Color(0xFF007AFF),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFF8E44AD),
           label: "",
           isSelected: selectedColor == const Color(0xFF8E44AD),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFFFF3B30),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF3B30),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFFFF9500),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF9500),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFFFFCC00),
           label: "",
           isSelected: selectedColor == const Color(0xFFFFCC00),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFF34C759),
           label: "",
           isSelected: selectedColor == const Color(0xFF34C759),
+          isMobile: true,
         ),
       ],
     );

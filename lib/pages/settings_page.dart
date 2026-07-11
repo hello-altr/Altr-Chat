@@ -379,6 +379,7 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 60),
                 ],
               ),
             ),
