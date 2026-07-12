@@ -10,6 +10,8 @@ class ChannelModel {
   final int unreadCount;
   final int warningCount;
   final DateTime? lastMessageTime;
+  final String createdBy;
+  final List<String> members;
 
   const ChannelModel({
     required this.id,
@@ -21,6 +23,8 @@ class ChannelModel {
     required this.unreadCount,
     required this.warningCount,
     this.lastMessageTime,
+    required this.createdBy,
+    required this.members,
   });
 
   factory ChannelModel.fromFirestore(DocumentSnapshot doc) {
@@ -36,6 +40,8 @@ class ChannelModel {
       unreadCount: data['unread_count'] ?? 0,
       warningCount: data['warning_count'] ?? 0,
       lastMessageTime: timestamp?.toDate(),
+      createdBy: data['created_by'] ?? '',
+      members: List<String>.from(data['members'] ?? []),
     );
   }
 

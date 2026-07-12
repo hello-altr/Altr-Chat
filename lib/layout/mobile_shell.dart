@@ -22,6 +22,7 @@ import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
 import 'package:chat/pages/user_page.dart';
+import 'package:chat/widgets/chat/channel_info_modal.dart';
 
 class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key});
@@ -189,6 +190,12 @@ class _MobileShellState extends ConsumerState<MobileShell> {
             if (activeSettingsPanel == SettingsPanelType.notifications)
               const Positioned.fill(
                 child: NotificationsPanelPage(),
+              ),
+
+            // Layer 2.10: Channel Info full-screen stack overlay
+            if (activeSettingsPanel == SettingsPanelType.channelInfo)
+              const Positioned.fill(
+                child: ChannelInfoPanel(),
               ),
   
             // Layer 3: Main Navigation Pill (Only visible when overlay slide layer is detached)

@@ -23,6 +23,7 @@ import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
 import 'package:chat/pages/user_page.dart';
+import 'package:chat/widgets/chat/channel_info_modal.dart';
 
 class DesktopShell extends ConsumerStatefulWidget {
   const DesktopShell({super.key});
@@ -145,6 +146,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
           SettingsPanelType.workspaceInfo => const WorkspaceInfoPage(),
           SettingsPanelType.usersAndGroups => const UsersAndGroupsPage(),
           SettingsPanelType.notifications => const NotificationsPanelPage(),
+          SettingsPanelType.channelInfo => const SizedBox.shrink(),
           SettingsPanelType.none => Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420.0),
@@ -265,7 +267,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 Expanded(child: centralViewCanvas),
                 if ((selectedIndex == 0 || selectedIndex == 1) &&
                     (activeSettingsPanel == SettingsPanelType.profile ||
-                     activeSettingsPanel == SettingsPanelType.notifications)) ...[
+                     activeSettingsPanel == SettingsPanelType.notifications ||
+                     activeSettingsPanel == SettingsPanelType.channelInfo)) ...[
                   // Resize drag handle divider for profile/notifications sidebar
                   GestureDetector(
                     behavior: HitTestBehavior.translucent,
@@ -289,9 +292,12 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                   ),
                   SizedBox(
                     width: _profileSidebarWidth,
-                    child: activeSettingsPanel == SettingsPanelType.profile
-                        ? const ProfileCardInspector()
-                        : const NotificationsPanelPage(),
+                    child: switch (activeSettingsPanel) {
+                      SettingsPanelType.profile => const ProfileCardInspector(),
+                      SettingsPanelType.notifications => const NotificationsPanelPage(),
+                      SettingsPanelType.channelInfo => const ChannelInfoPanel(),
+                      _ => const SizedBox.shrink(),
+                    },
                   ),
                 ],
               ],
