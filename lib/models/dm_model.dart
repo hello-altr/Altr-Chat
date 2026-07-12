@@ -24,7 +24,7 @@ class DmModel {
     final timestamp = data['last_message_time'] as Timestamp?;
     return DmModel(
       id: doc.id,
-      participants: List<String>.from(data['participants'] ?? []),
+      participants: (data['participants'] as List?)?.map((e) => e.toString()).toList().cast<String>() ?? <String>[],
       userName: '', // Will resolve using participant lookup/cache in UI or provider
       lastMessage: data['last_message'] ?? '',
       time: timestamp != null ? _formatTimestamp(timestamp) : '',

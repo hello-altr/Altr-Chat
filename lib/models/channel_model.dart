@@ -12,6 +12,7 @@ class ChannelModel {
   final DateTime? lastMessageTime;
   final String createdBy;
   final List<String> members;
+  final List<String> managers;
 
   const ChannelModel({
     required this.id,
@@ -25,6 +26,7 @@ class ChannelModel {
     this.lastMessageTime,
     required this.createdBy,
     required this.members,
+    required this.managers,
   });
 
   factory ChannelModel.fromFirestore(DocumentSnapshot doc) {
@@ -41,7 +43,8 @@ class ChannelModel {
       warningCount: data['warning_count'] ?? 0,
       lastMessageTime: timestamp?.toDate(),
       createdBy: data['created_by'] ?? '',
-      members: List<String>.from(data['members'] ?? []),
+      members: (data['members'] as List?)?.map((e) => e.toString()).toList().cast<String>() ?? <String>[],
+      managers: (data['managers'] as List?)?.map((e) => e.toString()).toList().cast<String>() ?? <String>[],
     );
   }
 

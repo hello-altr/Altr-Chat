@@ -169,9 +169,11 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 
     // Resolve channel name or DM counterpart display name
     String titleText = activeId;
+    bool isChannelPrivate = false;
     if (isChannel) {
       final channelAsync = ref.watch(activeChannelProvider(activeId));
       titleText = channelAsync.value?.name ?? activeId;
+      isChannelPrivate = channelAsync.value?.isPrivate ?? false;
     } else {
       final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
       final parts = activeId.split('_');
@@ -224,7 +226,9 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  isChannel ? HugeIconsStroke.hashtag : HugeIconsStroke.user,
+                  isChannel
+                      ? (isChannelPrivate ? HugeIconsStroke.lock : HugeIconsStroke.hashtag)
+                      : HugeIconsStroke.user,
                   color: theme.colorScheme.primary,
                   size: 18,
                 ),
@@ -288,7 +292,9 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          isChannel ? HugeIconsStroke.hashtag : HugeIconsStroke.chat01,
+                          isChannel
+                              ? (isChannelPrivate ? HugeIconsStroke.lock : HugeIconsStroke.hashtag)
+                              : HugeIconsStroke.chat01,
                           size: 64,
                           color: theme.colorScheme.primary.withAlpha(50),
                         ),

@@ -109,6 +109,7 @@ class ChatRepository {
       final list = snapshot.docs
           .map((doc) => ChannelModel.fromFirestore(doc))
           .where((ch) => !ch.isArchived)
+          .where((ch) => !ch.isPrivate || ch.members.contains(userId))
           .toList();
       list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       return list;

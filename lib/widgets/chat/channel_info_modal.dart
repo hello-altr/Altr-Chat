@@ -97,16 +97,21 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
     }
   }
 
-  Future<void> _promoteMemberToManager(String workspaceId, String userId, String displayName) async {
+  Future<void> _promoteMemberToManager(String workspaceId, String channelId, String userId, String displayName) async {
     try {
-      await FirebaseFirestore.instance.collection('workspaces').doc(workspaceId).update({
+      await FirebaseFirestore.instance
+          .collection('workspaces')
+          .doc(workspaceId)
+          .collection('channels')
+          .doc(channelId)
+          .update({
         'managers': FieldValue.arrayUnion([userId])
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Promoted $displayName to Workspace Manager.'),
+            content: Text('Promoted $displayName to Channel Manager.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -232,28 +237,18 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
   }
 
   void _showAddMemberDialog(String workspaceId, ChannelModel channel) {
-    final isMobile = ref.read(layoutProvider) == LayoutMode.mobile;
-    if (isMobile) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (context) => MobileAddMemberPage(
-            workspaceId: workspaceId,
-            channel: channel,
-          ),
-        ),
-      );
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AddMemberDialog(
-            workspaceId: workspaceId,
-            channel: channel,
-          );
-        },
-      );
-    }
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black54,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return ResponsiveAddMemberRoute(
+          workspaceId: workspaceId,
+          channel: channel,
+        );
+      },
+    );
   }
 
   Color _getInitialsBgColor(String name) {
@@ -329,9 +324,9 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
     // Access Context Rule Check
     final isCreator = channel.createdBy == currentUserId;
     final workspaceCreator = workspace['created_by'] ?? '';
-    final managers = List<String>.from(workspace['managers'] ?? []);
-    final isWorkspaceAdmin = currentUserId == workspaceCreator || managers.contains(currentUserId);
-    final isAuthorized = isCreator || isWorkspaceAdmin;
+    final isWorkspaceOwner = currentUserId == workspaceCreator;
+    final isChannelManager = channel.managers.contains(currentUserId);
+    final isAuthorized = isCreator || isWorkspaceOwner || isChannelManager;
 
     // Initialize text field value once when data loads
     if (_nameController.text.isEmpty && !_isSavingName && !_isEditingName) {
@@ -412,10 +407,9 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                                 ),
                               ],
                             ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              HugeIconsStroke.hashtag,
-                              color: Colors.white,
+                            child: Icon(
+                              channel.isPrivate ? HugeIconsStroke.lock : HugeIconsStroke.hashtag,
+                              color: theme.colorScheme.onPrimary,
                               size: 40,
                             ),
                           ),
@@ -511,13 +505,16 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: ActionButton(
-                              icon: Icons.person_add_outlined,
-                              label: 'Add Member',
-                              onTap: () => _showAddMemberDialog(workspaceId, channel),
+                          if (channel.isPrivate) ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ActionButton(
+                                icon: Icons.person_add_outlined,
+                                label: 'Add Member',
+                                onTap: () => _showAddMemberDialog(workspaceId, channel),
+                              ),
                             ),
-                          ),
+                          ],
                           const SizedBox(width: 8),
                           Expanded(
                             child: ActionButton(
@@ -539,33 +536,34 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                         padding: const EdgeInsets.all(16.0),
                         child: membersAsync.when(
                           data: (users) {
-                            final channelUsers = users.where((u) => channel.members.contains(u.userId)).toList();
+                            final channelUsers = channel.isPrivate
+                                ? users.where((u) => channel.members.contains(u.userId)).toList()
+                                : users;
 
                             final channelOwner = channelUsers.where((u) => u.userId == channel.createdBy).toList();
                             final otherManagers = channelUsers.where((u) =>
-                                (managers.contains(u.userId) || u.userId == workspaceCreator) &&
+                                channel.managers.contains(u.userId) &&
                                 u.userId != channel.createdBy).toList();
                             final regularMembers = channelUsers.where((u) =>
                                 u.userId != channel.createdBy &&
-                                !managers.contains(u.userId) &&
-                                u.userId != workspaceCreator).toList();
+                                !channel.managers.contains(u.userId)).toList();
 
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (channelOwner.isNotEmpty) ...[
                                   _buildRoleSectionHeader(theme, 'Channel Owner'),
-                                  ...channelOwner.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, true, false)),
+                                  ...channelOwner.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, true, false, channel.isPrivate)),
                                   const SizedBox(height: 12),
                                 ],
                                 if (otherManagers.isNotEmpty) ...[
-                                  _buildRoleSectionHeader(theme, 'Workspace Managers'),
-                                  ...otherManagers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, true)),
+                                  _buildRoleSectionHeader(theme, 'Channel Managers'),
+                                  ...otherManagers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, true, channel.isPrivate)),
                                   const SizedBox(height: 12),
                                 ],
                                 if (regularMembers.isNotEmpty) ...[
                                   _buildRoleSectionHeader(theme, 'Members'),
-                                  ...regularMembers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, false)),
+                                  ...regularMembers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, false, channel.isPrivate)),
                                 ],
                               ],
                             );
@@ -614,6 +612,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
     String currentUserId,
     bool isOwner,
     bool isManager,
+    bool isChannelPrivate,
   ) {
     final displayName = user.displayName;
     final photoUrl = user.photoUrl;
@@ -663,7 +662,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
               icon: const Icon(Icons.more_vert, size: 20),
               onSelected: (action) {
                 if (action == 'promote') {
-                  _promoteMemberToManager(workspaceId, user.userId, displayName);
+                  _promoteMemberToManager(workspaceId, channelId, user.userId, displayName);
                 } else if (action == 'remove') {
                   _removeMemberFromChannel(workspaceId, channelId, user.userId, displayName);
                 }
@@ -680,7 +679,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                       ],
                     ),
                   ),
-                if (!isOwner)
+                if (!isOwner && isChannelPrivate)
                   PopupMenuItem(
                     value: 'remove',
                     child: Row(
@@ -700,223 +699,419 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
   }
 }
 
-class AddMemberDialog extends ConsumerWidget {
+class ResponsiveAddMemberRoute extends ConsumerStatefulWidget {
   final String workspaceId;
   final ChannelModel channel;
 
-  const AddMemberDialog({
+  const ResponsiveAddMemberRoute({
     super.key,
     required this.workspaceId,
     required this.channel,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final membersAsync = ref.watch(workspaceMembersStreamProvider(workspaceId));
+  ConsumerState<ResponsiveAddMemberRoute> createState() => _ResponsiveAddMemberRouteState();
+}
 
-    return AlertDialog(
-      title: const Text('Add Participant'),
-      content: Container(
-        width: 400,
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: membersAsync.when(
+class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRoute> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final Set<String> _selectedUserIds = {};
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Color _getInitialsBgColor(String name) {
+    final colors = [
+      const Color(0xFFF43F5E),
+      const Color(0xFF3B82F6),
+      const Color(0xFF10B981),
+      const Color(0xFFF59E0B),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+    ];
+    return colors[name.hashCode % colors.length];
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length > 1) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    ThemeData theme,
+    AsyncValue<List<AltrUser>> membersAsync,
+    VoidCallback onClose,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. Search Bar
+        TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search by name or @handle...',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      setState(() {
+                        _searchController.clear();
+                        _searchQuery = '';
+                      });
+                    },
+                  )
+                : null,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12.0),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onChanged: (val) {
+            setState(() {
+              _searchQuery = val.trim().toLowerCase();
+            });
+          },
+        ),
+        const SizedBox(height: 12),
+
+        // 2. Horizontal Scrolling Selected Members Chips (Placeholder always stays)
+        membersAsync.when(
           data: (users) {
-            // Filter users who are not in the channel
-            final nonChannelUsers = users.where((u) => !channel.members.contains(u.userId)).toList();
-
-            if (nonChannelUsers.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24.0),
-                child: Text(
-                  'All workspace members are already participants in this channel.',
-                  textAlign: TextAlign.center,
+            if (_selectedUserIds.isEmpty) {
+              // Placeholder Chip to prevent layout jumping
+              return SizedBox(
+                height: 42,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHigh.withAlpha(120),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant.withAlpha(100),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.person_add_alt_1_outlined,
+                            size: 16,
+                            color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Select participants...',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             }
 
-            return ListView.builder(
-              shrinkWrap: true,
-              itemCount: nonChannelUsers.length,
-              itemBuilder: (context, index) {
-                final user = nonChannelUsers[index];
-                return ListTile(
-                  leading: user.photoUrl.isNotEmpty
-                      ? CircleAvatar(
-                          radius: 16,
-                          backgroundImage: NetworkImage(user.photoUrl),
-                        )
-                      : CircleAvatar(
-                          radius: 16,
-                          backgroundColor: theme.colorScheme.primary.withAlpha(40),
-                          child: Text(
-                            user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                  title: Text(user.displayName),
-                  subtitle: Text('@${user.userName}'),
-                  trailing: TextButton(
-                    onPressed: () async {
-                      try {
-                        await FirebaseFirestore.instance
-                            .collection('workspaces')
-                            .doc(workspaceId)
-                            .collection('channels')
-                            .doc(channel.id)
-                            .update({
-                              'members': FieldValue.arrayUnion([user.userId])
-                            });
+            final selectedUsers = users.where((u) => _selectedUserIds.contains(u.userId)).toList();
 
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Added ${user.displayName} to channel.'),
-                              behavior: SnackBarBehavior.floating,
+            return SizedBox(
+              height: 42,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: selectedUsers.length,
+                itemBuilder: (context, index) {
+                  final user = selectedUsers[index];
+                  final displayName = user.displayName;
+                  final photoUrl = user.photoUrl;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: InputChip(
+                      avatar: photoUrl.isNotEmpty
+                          ? CircleAvatar(
+                              backgroundImage: NetworkImage(photoUrl),
+                            )
+                          : CircleAvatar(
+                              backgroundColor: _getInitialsBgColor(displayName),
+                              child: Text(
+                                _getInitials(displayName),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to add member: $e'),
-                              backgroundColor: theme.colorScheme.error,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    child: const Text('Add'),
-                  ),
-                );
-              },
+                      label: Text(
+                        displayName,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onDeleted: () {
+                        setState(() {
+                          _selectedUserIds.remove(user.userId);
+                        });
+                      },
+                      deleteIconColor: theme.colorScheme.error,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                    ),
+                  );
+                },
+              ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Text('Error loading workspace members: $err'),
+          loading: () => const SizedBox(height: 42),
+          error: (err, stack) => const SizedBox(height: 42),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+        const SizedBox(height: 8),
+        const Divider(),
+
+        // 3. Scrollable List of Members
+        Expanded(
+          child: membersAsync.when(
+            data: (users) {
+              final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
+
+              // Filter by search query
+              final filteredUsers = users.where((u) {
+                if (_searchQuery.isEmpty) return true;
+                final nameMatch = u.displayName.toLowerCase().contains(_searchQuery);
+                final handleMatch = u.userName.toLowerCase().contains(_searchQuery);
+                return nameMatch || handleMatch;
+              }).toList();
+
+              // Sort: Active (non-channel) users first, joined users / current user last
+              filteredUsers.sort((a, b) {
+                final aJoined = widget.channel.members.contains(a.userId) || a.userId == currentUserId;
+                final bJoined = widget.channel.members.contains(b.userId) || b.userId == currentUserId;
+                if (aJoined && !bJoined) return 1;
+                if (!aJoined && bJoined) return -1;
+                return a.displayName.compareTo(b.displayName);
+              });
+
+              if (filteredUsers.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Text(
+                      'No workspace members match your selection.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: filteredUsers.length,
+                itemBuilder: (context, index) {
+                  final user = filteredUsers[index];
+                  final isJoined = widget.channel.members.contains(user.userId) || user.userId == currentUserId;
+                  final isSelected = isJoined || _selectedUserIds.contains(user.userId);
+                  final displayName = user.displayName;
+                  final photoUrl = user.photoUrl;
+
+                  if (isJoined) {
+                    final suffix = user.userId == currentUserId ? ' (You)' : ' (Joined)';
+                    return Opacity(
+                      opacity: 0.5,
+                      child: CheckboxListTile(
+                        value: true,
+                        onChanged: null,
+                        secondary: photoUrl.isNotEmpty
+                            ? CircleAvatar(
+                                backgroundImage: NetworkImage(photoUrl),
+                              )
+                            : CircleAvatar(
+                                backgroundColor: _getInitialsBgColor(displayName),
+                                child: Text(
+                                  _getInitials(displayName),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                        title: Text(displayName),
+                        subtitle: Text('@${user.userName}$suffix'),
+                        controlAffinity: ListTileControlAffinity.trailing,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    );
+                  }
+
+                  return CheckboxListTile(
+                    value: isSelected,
+                    onChanged: (bool? val) {
+                      setState(() {
+                        if (val == true) {
+                          _selectedUserIds.add(user.userId);
+                        } else {
+                          _selectedUserIds.remove(user.userId);
+                        }
+                      });
+                    },
+                    secondary: photoUrl.isNotEmpty
+                        ? CircleAvatar(
+                            backgroundImage: NetworkImage(photoUrl),
+                          )
+                        : CircleAvatar(
+                            backgroundColor: _getInitialsBgColor(displayName),
+                            child: Text(
+                              _getInitials(displayName),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                    title: Text(displayName),
+                    subtitle: Text('@${user.userName}'),
+                    controlAffinity: ListTileControlAffinity.trailing,
+                    contentPadding: EdgeInsets.zero,
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(child: Text('Error loading members: $err')),
+          ),
+        ),
+        const Divider(),
+
+        // 4. Save Buttons Bottom Row
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: onClose,
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: _isSaving || _selectedUserIds.isEmpty
+                    ? null
+                    : () async {
+                        setState(() {
+                          _isSaving = true;
+                        });
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection('workspaces')
+                              .doc(widget.workspaceId)
+                              .collection('channels')
+                              .doc(widget.channel.id)
+                              .update({
+                            'members': FieldValue.arrayUnion(_selectedUserIds.toList()),
+                          });
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Added ${_selectedUserIds.length} member(s) to the channel.'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            onClose();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to add members: $e'),
+                                backgroundColor: theme.colorScheme.error,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isSaving = false;
+                            });
+                          }
+                        }
+                      },
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text('Add Selected (${_selectedUserIds.length})'),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
-}
-
-class MobileAddMemberPage extends ConsumerWidget {
-  final String workspaceId;
-  final ChannelModel channel;
-
-  const MobileAddMemberPage({
-    super.key,
-    required this.workspaceId,
-    required this.channel,
-  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final membersAsync = ref.watch(workspaceMembersStreamProvider(workspaceId));
+    final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
+    final membersAsync = ref.watch(workspaceMembersStreamProvider(widget.workspaceId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Participant'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => Navigator.of(context).pop(),
+    if (isMobile) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Add Participant'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _buildContent(context, theme, membersAsync, () => Navigator.of(context).pop()),
+          ),
+        ),
+      );
+    }
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      body: SafeArea(
-        child: membersAsync.when(
-          data: (users) {
-            // Filter users who are not in the channel
-            final nonChannelUsers = users.where((u) => !channel.members.contains(u.userId)).toList();
-
-            if (nonChannelUsers.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Text(
-                    'All workspace members are already participants in this channel.',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              );
-            }
-
-            return ListView.builder(
-              itemCount: nonChannelUsers.length,
-              itemBuilder: (context, index) {
-                final user = nonChannelUsers[index];
-                return ListTile(
-                  leading: user.photoUrl.isNotEmpty
-                      ? CircleAvatar(
-                          radius: 18,
-                          backgroundImage: NetworkImage(user.photoUrl),
-                        )
-                      : CircleAvatar(
-                          radius: 18,
-                          backgroundColor: theme.colorScheme.primary.withAlpha(40),
-                          child: Text(
-                            user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                  title: Text(user.displayName),
-                  subtitle: Text('@${user.userName}'),
-                  trailing: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        await FirebaseFirestore.instance
-                            .collection('workspaces')
-                            .doc(workspaceId)
-                            .collection('channels')
-                            .doc(channel.id)
-                            .update({
-                              'members': FieldValue.arrayUnion([user.userId])
-                            });
-
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Added ${user.displayName} to channel.'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to add member: $e'),
-                              backgroundColor: theme.colorScheme.error,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    child: const Text('Add'),
-                  ),
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('Error loading workspace members: $err')),
+      child: Container(
+        width: 450,
+        height: 550,
+        constraints: const BoxConstraints(maxWidth: 450, maxHeight: 550),
+        padding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Add Participant',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _buildContent(context, theme, membersAsync, () => Navigator.of(context).pop()),
+            ),
+          ],
         ),
       ),
     );

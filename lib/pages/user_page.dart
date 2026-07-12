@@ -641,7 +641,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                         SettingsPanelType.none;
                   },
                 ),
-                title: const Text('Users & Groups'),
+                title: const Text('Users & User Groups'),
               )
             : null,
         body: const Center(
@@ -681,7 +681,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
               )
             : null,
         title: Text(
-          'Users & Groups',
+          'Users & User Groups',
           style: TextStyle(
             color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.bold,
