@@ -17,53 +17,58 @@ import 'package:chat/models/user_model.dart';
 
 /// Entrypoint to display the creation flow modal adaptively.
 void showCreationFlowModal(BuildContext context, {required bool isChannel}) {
-  final width = MediaQuery.of(context).size.width;
-  final isMobile = width < 840;
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    builder: (context) {
+      return CreationFlowResponsiveDialog(isChannel: isChannel);
+    },
+  );
+}
 
-  if (isMobile) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          body: CreationFlowModal(
-            isChannel: isChannel,
-            isMobile: true,
-          ),
-        ),
-      ),
-    );
-  } else {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.45),
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 40,
-            vertical: 24,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 580, maxHeight: 520),
-              child: Card(
-                elevation: 12,
-                clipBehavior: Clip.antiAlias,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                color: theme.colorScheme.surfaceContainer,
-                child: CreationFlowModal(
-                  isChannel: isChannel,
-                  isMobile: false,
+class CreationFlowResponsiveDialog extends ConsumerWidget {
+  final bool isChannel;
+
+  const CreationFlowResponsiveDialog({
+    super.key,
+    required this.isChannel,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 840;
+    final theme = Theme.of(context);
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: isMobile
+          ? EdgeInsets.zero
+          : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      child: isMobile
+          ? CreationFlowModal(
+              isChannel: isChannel,
+              isMobile: true,
+            )
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 580, maxHeight: 520),
+                child: Card(
+                  elevation: 12,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  color: theme.colorScheme.surfaceContainer,
+                  child: CreationFlowModal(
+                    isChannel: isChannel,
+                    isMobile: false,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
     );
   }
 }
