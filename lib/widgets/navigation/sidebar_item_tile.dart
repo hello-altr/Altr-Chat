@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
+import 'package:chat/providers/chat_session_provider.dart';
 
 // Repositories
 import 'package:chat/repositories/chat_repository.dart';
@@ -43,6 +44,47 @@ class SidebarItemTile extends ConsumerStatefulWidget {
 class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
   TapDownDetails? _tapDownDetails;
 
+  Future<bool?> _showWarningDialog({
+    required BuildContext context,
+    required String title,
+    required String content,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          constraints: const BoxConstraints(maxWidth: 400),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(title),
+              ),
+            ],
+          ),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+              ),
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showPopupMenu(BuildContext context, WidgetRef ref) {
     if (_tapDownDetails == null) return;
     
@@ -56,6 +98,8 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
     );
 
     final isChannel = widget.title.startsWith('#');
+    final activeWorkspaceId = ref.read(currentWorkspaceIdProvider) ?? '';
+    final theme = Theme.of(context);
 
     showMenu<String>(
       context: context,
@@ -71,9 +115,32 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
             ],
           ),
         ),
+        PopupMenuItem<String>(
+          value: 'clear',
+          child: Row(
+            children: [
+              Icon(Icons.delete_sweep_outlined, size: 20, color: theme.colorScheme.error),
+              const SizedBox(width: 12),
+              Text('Clear History', style: TextStyle(color: theme.colorScheme.error)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_forever_outlined, size: 20, color: theme.colorScheme.error),
+              const SizedBox(width: 12),
+              Text('Delete Chat', style: TextStyle(color: theme.colorScheme.error)),
+            ],
+          ),
+        ),
       ],
-    ).then((value) {
-      if (!context.mounted) return;
+    ).then((value) async {
+      if (!context.mounted || value == null) return;
+      
+      final repo = ref.read(chatRepositoryProvider);
+
       if (value == 'info') {
         if (isChannel) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -88,6 +155,56 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
           );
           ref.read(profileTargetUserIdProvider.notifier).state = counterpartId;
           ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+        }
+      } else if (value == 'clear') {
+        final confirm = await _showWarningDialog(
+          context: context,
+          title: 'Clear Chat History',
+          content: 'Are you sure you want to clear the chat history for "${widget.title}"? This action cannot be undone.',
+        );
+        if (confirm == true && context.mounted) {
+          try {
+            await repo.clearChatHistory(
+              workspaceId: activeWorkspaceId,
+              id: widget.id,
+              isChannel: isChannel,
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Chat history cleared.')),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: $e')),
+            );
+          }
+        }
+      } else if (value == 'delete') {
+        final confirm = await _showWarningDialog(
+          context: context,
+          title: 'Delete Chat',
+          content: 'Are you sure you want to permanently delete the chat "${widget.title}"? This action cannot be undone.',
+        );
+        if (confirm == true && context.mounted) {
+          try {
+            // Deselect the active chat if it was deleted
+            final chatSession = ref.read(activeChatSessionProvider);
+            if (chatSession.chatId == widget.id) {
+              ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+            }
+
+            await repo.deleteChat(
+              workspaceId: activeWorkspaceId,
+              id: widget.id,
+              isChannel: isChannel,
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Chat deleted.')),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: $e')),
+            );
+          }
         }
       }
     });

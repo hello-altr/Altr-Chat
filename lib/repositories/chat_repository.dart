@@ -180,6 +180,45 @@ class ChatRepository {
 
     return controller.stream;
   }
+
+  Future<void> clearChatHistory({
+    required String workspaceId,
+    required String id,
+    required bool isChannel,
+  }) async {
+    final docRef = _firestore
+        .collection('workspaces')
+        .doc(workspaceId)
+        .collection(isChannel ? 'channels' : 'dms')
+        .doc(id);
+
+    if (isChannel) {
+      await docRef.update({
+        'last_message': 'History cleared',
+        'last_message_time': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await docRef.update({
+        'last_message': 'History cleared',
+        'last_message_preview': 'History cleared',
+        'last_message_time': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  Future<void> deleteChat({
+    required String workspaceId,
+    required String id,
+    required bool isChannel,
+  }) async {
+    final docRef = _firestore
+        .collection('workspaces')
+        .doc(workspaceId)
+        .collection(isChannel ? 'channels' : 'dms')
+        .doc(id);
+
+    await docRef.delete();
+  }
 }
 
 // Providers

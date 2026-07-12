@@ -6,15 +6,37 @@ import 'package:material_ui/material_ui.dart';
 
 // Widgets
 import 'package:chat/widgets/chat/creation_flow_modal.dart';
+import 'package:chat/widgets/navigation/sidebar_item_tile.dart';
 
 // Providers
 import 'package:chat/providers/appearance_notifier.dart';
 import 'package:chat/providers/auth_provider.dart';
+import 'package:chat/repositories/chat_repository.dart';
 
 // Models
 import 'package:chat/models/user_model.dart';
 
+class MockChatRepository implements ChatRepository {
+  @override
+  final Map<String, AltrUser> _userProfileCache = {};
+
+  @override
+  bool hasCachedUser(String userId) => _userProfileCache.containsKey(userId);
+
+  @override
+  AltrUser? getCachedUser(String userId) => _userProfileCache[userId];
+
+  @override
+  void cacheUser(String userId, AltrUser user) {
+    _userProfileCache[userId] = user;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+
   testWidgets('CreationFlowModal Desktop View - Centered Dialog Bounded Constraints', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -258,5 +280,69 @@ void main() {
     // Verify it has shifted to zero inset padding (mobile fullscreen dialog wrapper)
     final Dialog mobileDialog = tester.widget(find.byType(Dialog));
     expect(mobileDialog.insetPadding, EdgeInsets.zero);
+  });
+
+  testWidgets('SidebarItemTile Long Press - Displays Info, Clear, Delete options', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final mockUser = AltrUser(
+      userId: 'test_uid',
+      userName: 'test_user',
+      displayName: 'Test User',
+      photoUrl: '',
+      emailId: 'test@example.com',
+      joinedWorkspaces: ['test_ws'],
+      activeWorkspaceId: 'test_ws',
+      onboardingCompleted: true,
+      profileOnboardingCompleted: true,
+      workspaceOnboardingCompleted: true,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider.overrideWith((ref) => mockUser),
+          deviceIdProvider.overrideWith((ref) => 'test_device'),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          chatRepositoryProvider.overrideWithValue(MockChatRepository()),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SidebarItemTile(
+              id: 'test_channel_id',
+              title: '#general',
+              subtitle: 'Welcome to general',
+              time: '12:00',
+              icon: const Icon(Icons.tag),
+              isSelected: false,
+              lastMessageTime: DateTime.now(),
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Verify initial tile rendering
+    expect(find.text('#general'), findsOneWidget);
+
+    // Perform long press to show menu
+    await tester.longPress(find.text('#general'));
+    await tester.pumpAndSettle();
+
+    // Verify popup menu items exist
+    expect(find.text('Get Info'), findsOneWidget);
+    expect(find.text('Clear History'), findsOneWidget);
+    expect(find.text('Delete Chat'), findsOneWidget);
+
+    // Tap 'Clear History'
+    await tester.tap(find.text('Clear History'));
+    await tester.pumpAndSettle();
+
+    // Verify warning dialog is presented
+    expect(find.text('Clear Chat History'), findsWidgets);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
   });
 }
