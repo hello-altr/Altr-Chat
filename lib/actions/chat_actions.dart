@@ -1,23 +1,16 @@
 // Packages
 import 'package:material_ui/material_ui.dart';
 
+// Widgets
+import 'package:chat/widgets/chat/creation_flow_modal.dart';
+
 class ChatActions {
   static void triggerCreateChannel(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Triggering Workspace Channel Creation Wizard...'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    showCreationFlowModal(context, isChannel: true);
   }
 
   static void triggerNewDm(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Triggering Global Directory Search Drawer...'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    showCreationFlowModal(context, isChannel: false);
   }
 
   static void triggerInviteCoworkers(BuildContext context) {
