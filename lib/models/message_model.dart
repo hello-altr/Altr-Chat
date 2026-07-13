@@ -7,6 +7,9 @@ class MessageModel {
   final String senderPhotoUrl;
   final String content;
   final DateTime? timestamp;
+  final String? quotedMessageContent;
+  final String? quotedMessageSenderName;
+  final bool isEdited;
 
   const MessageModel({
     required this.id,
@@ -15,6 +18,9 @@ class MessageModel {
     required this.senderPhotoUrl,
     required this.content,
     this.timestamp,
+    this.quotedMessageContent,
+    this.quotedMessageSenderName,
+    this.isEdited = false,
   });
 
   factory MessageModel.fromFirestore(DocumentSnapshot doc) {
@@ -27,6 +33,9 @@ class MessageModel {
       senderPhotoUrl: data['sender_photo_url'] ?? '',
       content: data['content'] ?? '',
       timestamp: timestamp?.toDate(),
+      quotedMessageContent: data['quoted_message_content'],
+      quotedMessageSenderName: data['quoted_message_sender_name'],
+      isEdited: data['is_edited'] ?? false,
     );
   }
 
@@ -37,6 +46,9 @@ class MessageModel {
       'sender_photo_url': senderPhotoUrl,
       'content': content,
       'timestamp': timestamp != null ? Timestamp.fromDate(timestamp!) : FieldValue.serverTimestamp(),
+      'quoted_message_content': quotedMessageContent,
+      'quoted_message_sender_name': quotedMessageSenderName,
+      'is_edited': isEdited,
     };
   }
 }

@@ -55,7 +55,9 @@ class ChatFeedCanvas extends ConsumerStatefulWidget {
 
 class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
   late TextEditingController _controller;
-  final FocusNode _inputFocusNode = FocusNode();
+  FocusNode _inputFocusNode = FocusNode();
+  MessageModel? _quotedMessage;
+  MessageModel? _editingMessage;
 
   @override
   void initState() {
@@ -123,6 +125,14 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
         'sender_photo_url': senderPhotoUrl,
         'content': content,
         'timestamp': FieldValue.serverTimestamp(),
+        if (_quotedMessage != null) ...{
+          'quoted_message_content': _quotedMessage!.content,
+          'quoted_message_sender_name': _quotedMessage!.senderName,
+        }
+      });
+
+      setState(() {
+        _quotedMessage = null;
       });
 
       if (isChannel) {
@@ -149,6 +159,67 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
     }
   }
 
+  Widget _buildQuotePreview(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withAlpha(80),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 36,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _quotedMessage!.senderName,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _quotedMessage!.content,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () {
+              setState(() {
+                _quotedMessage = null;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _updateMessage(String messageId, String newContent) async {
     final workspaceId = ref.read(currentWorkspaceIdProvider);
     if (workspaceId == null) return;
@@ -168,6 +239,7 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
           .doc(messageId)
           .update({
         'content': newContent,
+        'is_edited': true,
       });
     } catch (e) {
       if (mounted) {
@@ -211,37 +283,84 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
     }
   }
 
-  void _showEditDialog(BuildContext context, MessageModel message) {
-    final controller = TextEditingController(text: message.content);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Message'),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            hintText: 'Edit your message...',
+  Widget _buildEditPreview(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withAlpha(80),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.edit_outlined,
+            size: 20,
+            color: theme.colorScheme.primary,
           ),
-          TextButton(
-            onPressed: () async {
-              final newContent = controller.text.trim();
-              if (newContent.isNotEmpty) {
-                Navigator.pop(ctx);
-                await _updateMessage(message.id, newContent);
-              }
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Editing Message',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _editingMessage!.content,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () {
+              setState(() {
+                _editingMessage = null;
+                _controller.clear();
+              });
             },
-            child: const Text('Save'),
           ),
         ],
       ),
     );
+  }
+
+  void _handleSubmit() {
+    if (_editingMessage != null) {
+      _saveEditedMessage();
+    } else {
+      _sendMessage();
+    }
+  }
+
+  Future<void> _saveEditedMessage() async {
+    if (_editingMessage == null) return;
+    final content = _controller.text.trim();
+    if (content.isEmpty) return;
+
+    final messageId = _editingMessage!.id;
+
+    setState(() {
+      _editingMessage = null;
+      _controller.clear();
+    });
+
+    await _updateMessage(messageId, content);
   }
 
   void _showDeleteConfirmDialog(BuildContext context, MessageModel message) {
@@ -453,9 +572,11 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                     return MessageRow(
                       message: message,
                       showSenderInfo: showSenderInfo,
-                      onQuote: (text) {
-                        final currentText = _controller.text;
-                        _controller.text = '> $text\n$currentText';
+                      onQuote: (msg) {
+                        setState(() {
+                          _quotedMessage = msg;
+                        });
+                        _inputFocusNode.requestFocus();
                       },
                       onStartThread: (msg) {
                         showDialog(
@@ -473,7 +594,12 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                         );
                       },
                       onEdit: (msg) {
-                        _showEditDialog(context, msg);
+                        setState(() {
+                          _editingMessage = msg;
+                          _quotedMessage = null;
+                          _controller.text = msg.content;
+                        });
+                        _inputFocusNode.requestFocus();
                       },
                       onDelete: (msg) {
                         _showDeleteConfirmDialog(context, msg);
@@ -497,7 +623,6 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
           ),
           if (!widget.isReadOnly)
             Container(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 8),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
                 border: Border(
@@ -508,72 +633,90 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
               ),
               child: SafeArea(
                 top: false,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Focus(
-                        onKeyEvent: (node, event) {
-                          if (!isMobile && event is KeyDownEvent) {
-                            if (event.logicalKey == LogicalKeyboardKey.enter ||
-                                event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-                              final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-                              if (!isShiftPressed) {
-                                _sendMessage();
-                                return KeyEventResult.handled;
-                              }
-                            }
-                          }
-                          return KeyEventResult.ignored;
-                        },
-                        child: TextField(
-                          controller: _controller,
-                          focusNode: _inputFocusNode,
-                          minLines: 1,
-                          maxLines: 4,
-                          keyboardType: TextInputType.multiline,
-                          textInputAction: TextInputAction.newline,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: theme.colorScheme.surfaceContainerHigh,
-                            hintText: 'Type your message here...',
-                            hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide(
-                                color: theme.colorScheme.outlineVariant.withAlpha(80),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide(
-                                color: theme.colorScheme.outlineVariant.withAlpha(80),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide(
-                                color: theme.colorScheme.primary,
-                                width: 2,
+                    if (_quotedMessage != null)
+                      _buildQuotePreview(theme),
+                    if (_editingMessage != null)
+                      _buildEditPreview(theme),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Focus(
+                              onKeyEvent: (node, event) {
+                                if (!isMobile && event is KeyDownEvent) {
+                                  if (event.logicalKey == LogicalKeyboardKey.enter ||
+                                      event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+                                    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+                                    if (!isShiftPressed) {
+                                      _handleSubmit();
+                                      return KeyEventResult.handled;
+                                    }
+                                  }
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: TextField(
+                                controller: _controller,
+                                focusNode: _inputFocusNode,
+                                minLines: 1,
+                                maxLines: 4,
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.newline,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: theme.colorScheme.surfaceContainerHigh,
+                                  hintText: _editingMessage != null
+                                      ? 'Edit your message...'
+                                      : 'Type your message here...',
+                                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide(
+                                      color: theme.colorScheme.outlineVariant.withAlpha(80),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide(
+                                      color: theme.colorScheme.outlineVariant.withAlpha(80),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide(
+                                      color: theme.colorScheme.primary,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                style: theme.textTheme.bodyMedium,
                               ),
                             ),
                           ),
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _sendMessage,
-                      icon: const Icon(HugeIconsStroke.sent),
-                      style: IconButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                        minimumSize: const Size(48, 48),
-                        maximumSize: const Size(48, 48),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _handleSubmit,
+                            icon: Icon(
+                              _editingMessage != null
+                                  ? Icons.check
+                                  : HugeIconsStroke.sent,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              minimumSize: const Size(48, 48),
+                              maximumSize: const Size(48, 48),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -589,7 +732,7 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 class MessageRow extends ConsumerStatefulWidget {
   final MessageModel message;
   final bool showSenderInfo;
-  final Function(String text) onQuote;
+  final Function(MessageModel message) onQuote;
   final Function(MessageModel message) onStartThread;
   final Function(MessageModel message) onEdit;
   final Function(MessageModel message) onDelete;
@@ -734,7 +877,7 @@ class _MessageRowState extends ConsumerState<MessageRow> {
                         text: 'Quote Message',
                         onTap: () {
                           _hidePopupMenu();
-                          widget.onQuote(widget.message.content);
+                          widget.onQuote(widget.message);
                         },
                         theme: theme,
                       ),
@@ -878,9 +1021,23 @@ class _MessageRowState extends ConsumerState<MessageRow> {
                                   fontSize: 10,
                                 ),
                               ),
+                              if (widget.message.isEdited) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '(edited)',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 4),
+                        ],
+                        if (widget.message.quotedMessageContent != null) ...[
+                          _buildQuotedMessageBubble(theme),
+                          const SizedBox(height: 6),
                         ],
                         Text(
                           widget.message.content,
@@ -902,6 +1059,47 @@ class _MessageRowState extends ConsumerState<MessageRow> {
         child: SizedBox(height: 36),
       ),
       error: (err, stack) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildQuotedMessageBubble(ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 4,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.message.quotedMessageSenderName ?? '',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            widget.message.quotedMessageContent ?? '',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
