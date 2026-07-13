@@ -43,6 +43,7 @@ class SidebarItemTile extends ConsumerStatefulWidget {
 
 class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
   TapDownDetails? _tapDownDetails;
+  DateTime? _lastReadTimeLocally;
 
   Future<bool?> _showWarningDialog({
     required BuildContext context,
@@ -207,25 +208,26 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
     final theme = Theme.of(context);
     final layoutMode = ref.watch(layoutProvider);
     final isDesktop = layoutMode == LayoutMode.desktop;
-    
     final activeWorkspaceId = ref.watch(currentWorkspaceIdProvider) ?? '';
     
-    // Wire up activity tracking badges
-    final metaAsync = ref.watch(workspaceMetaProvider(activeWorkspaceId));
+    if (widget.isSelected) {
+      _lastReadTimeLocally = DateTime.now();
+    }
+
+    final isChannel = widget.title.startsWith('#');
+    final unreadCountAsync = ref.watch(unreadCountStreamProvider(
+      UnreadCountArgs(chatId: widget.id, isChannel: isChannel),
+    ));
     
-    bool isUnread = false;
-    if (widget.lastMessageTime != null && !widget.isSelected) {
-      final metaData = metaAsync.value;
-      final lastReadTimestamps = metaData?['last_read_timestamps'] as Map<String, dynamic>? ?? {};
-      final lastReadVal = lastReadTimestamps[widget.id];
-      
-      if (lastReadVal == null) {
-        isUnread = true;
-      } else if (lastReadVal is Timestamp) {
-        final lastReadDateTime = lastReadVal.toDate();
-        isUnread = widget.lastMessageTime!.isAfter(lastReadDateTime);
+    int unreadCount = unreadCountAsync.value ?? 0;
+    if (widget.isSelected) {
+      unreadCount = 0;
+    } else if (_lastReadTimeLocally != null && widget.lastMessageTime != null) {
+      if (!widget.lastMessageTime!.isAfter(_lastReadTimeLocally!)) {
+        unreadCount = 0;
       }
     }
+    final bool isUnread = unreadCount > 0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
@@ -242,6 +244,7 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
         },
         child: InkWell(
           onTap: () {
+            _lastReadTimeLocally = DateTime.now();
             // Banish badge immediately in Firestore
             final authUser = ref.read(authStateProvider).value;
             if (authUser != null && activeWorkspaceId.isNotEmpty) {
@@ -278,6 +281,7 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
               ),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Lead Icon
                 widget.icon,
@@ -303,18 +307,6 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          // High-density unread indicator element (color badge mark dot) right adjacent to the label
-                          if (isUnread) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -332,13 +324,42 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
                 ),
                 const SizedBox(width: 12),
                 
-                // Time stamp details
-                Text(
-                  widget.time,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                    fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                  ),
+                // Time stamp and unread count badge details
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.time,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                        fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    if (isUnread) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -348,3 +369,49 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
     );
   }
 }
+
+class UnreadCountArgs {
+  final String chatId;
+  final bool isChannel;
+  const UnreadCountArgs({required this.chatId, required this.isChannel});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UnreadCountArgs &&
+          runtimeType == other.runtimeType &&
+          chatId == other.chatId &&
+          isChannel == other.isChannel;
+
+  @override
+  int get hashCode => chatId.hashCode ^ isChannel.hashCode;
+}
+
+final unreadCountStreamProvider = StreamProvider.family<int, UnreadCountArgs>((ref, args) {
+  final workspaceId = ref.watch(currentWorkspaceIdProvider);
+  if (workspaceId == null) return Stream.value(0);
+
+  final metaAsync = ref.watch(workspaceMetaProvider(workspaceId));
+  return metaAsync.when(
+    data: (metaData) {
+      final lastReadTimestamps = metaData?['last_read_timestamps'] as Map<String, dynamic>? ?? {};
+      final lastReadVal = lastReadTimestamps[args.chatId];
+
+      var query = FirebaseFirestore.instance
+          .collection('workspaces')
+          .doc(workspaceId)
+          .collection(args.isChannel ? 'channels' : 'dms')
+          .doc(args.chatId)
+          .collection('messages');
+
+      Query finalQuery = query;
+      if (lastReadVal != null && lastReadVal is Timestamp) {
+        finalQuery = query.where('timestamp', isGreaterThan: lastReadVal);
+      }
+
+      return finalQuery.snapshots().map((snapshot) => snapshot.docs.length);
+    },
+    loading: () => Stream.value(0),
+    error: (err, stack) => Stream.value(0),
+  );
+});

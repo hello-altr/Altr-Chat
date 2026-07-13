@@ -13,6 +13,7 @@ import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/repositories/chat_repository.dart';
 import 'package:chat/models/message_model.dart';
+import 'package:chat/providers/appearance_notifier.dart';
 
 // Enums
 import 'package:chat/enums/layout_mode.dart';
@@ -427,9 +428,51 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 
     final messagesAsync = ref.watch(messagesStreamProvider(activeId));
 
+    // Auto mark as read when new messages arrive while the chat is open
+    final workspaceId = ref.watch(currentWorkspaceIdProvider);
+    if (workspaceId != null) {
+      final metaAsync = ref.watch(workspaceMetaProvider(workspaceId));
+      if (messagesAsync.hasValue && messagesAsync.value!.isNotEmpty && metaAsync.hasValue) {
+        final messages = messagesAsync.value!;
+        final latestMessageTime = messages.first.timestamp;
+
+        final metaData = metaAsync.value;
+        final lastReadTimestamps = metaData?['last_read_timestamps'] as Map<String, dynamic>? ?? {};
+        final lastReadVal = lastReadTimestamps[activeId];
+
+        bool needsUpdate = false;
+        if (latestMessageTime != null) {
+          if (lastReadVal == null) {
+            needsUpdate = true;
+          } else if (lastReadVal is Timestamp) {
+            needsUpdate = latestMessageTime.isAfter(lastReadVal.toDate());
+          }
+        }
+
+        if (needsUpdate) {
+          final authUser = ref.read(authStateProvider).value;
+          if (authUser != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(authUser.uid)
+                  .collection('workspace_meta')
+                  .doc(workspaceId)
+                  .set({
+                    'last_read_timestamps': {
+                      activeId: FieldValue.serverTimestamp(),
+                    }
+                  }, SetOptions(merge: true));
+            });
+          }
+        }
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surfaceContainer,
+        scrolledUnderElevation: 0,
         automaticallyImplyLeading: false, // Custom back button used on mobile
         titleSpacing: isMobile ? 0 : 16,
         leading: isMobile
@@ -568,10 +611,13 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                     final message = messages[index];
                     final bool showSenderInfo = index + 1 >= messages.length ||
                         messages[index + 1].senderId != message.senderId;
-
+                    final bool isLastOfBlock = index - 1 < 0 ||
+                        messages[index - 1].senderId != message.senderId;
+ 
                     return MessageRow(
                       message: message,
                       showSenderInfo: showSenderInfo,
+                      isLastOfBlock: isLastOfBlock,
                       onQuote: (msg) {
                         setState(() {
                           _quotedMessage = msg;
@@ -732,6 +778,7 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 class MessageRow extends ConsumerStatefulWidget {
   final MessageModel message;
   final bool showSenderInfo;
+  final bool isLastOfBlock;
   final Function(MessageModel message) onQuote;
   final Function(MessageModel message) onStartThread;
   final Function(MessageModel message) onEdit;
@@ -742,6 +789,7 @@ class MessageRow extends ConsumerStatefulWidget {
     super.key,
     required this.message,
     required this.showSenderInfo,
+    required this.isLastOfBlock,
     required this.onQuote,
     required this.onStartThread,
     required this.onEdit,
@@ -964,95 +1012,14 @@ class _MessageRowState extends ConsumerState<MessageRow> {
       data: (user) {
         final displayName = user?.displayName ?? widget.message.senderName;
         final photoUrl = user?.photoUrl ?? widget.message.senderPhotoUrl;
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTapDown: (details) {
-              _tapDownDetails = details;
-            },
-            onSecondaryTapDown: (details) {
-              _tapDownDetails = details;
-            },
-            onTap: () {
-              // Allows ripple effect to play on simple tap
-            },
-            onSecondaryTap: () {
-              _showPopupMenu(context);
-            },
-            onLongPress: () {
-              _showPopupMenu(context);
-            },
-            hoverColor: theme.colorScheme.onSurface.withAlpha(12),
-            splashColor: theme.colorScheme.primary.withAlpha(20),
-            highlightColor: theme.colorScheme.primary.withAlpha(10),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                vertical: widget.showSenderInfo ? 8.0 : 2.0,
-                horizontal: 16.0,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.showSenderInfo)
-                    _buildAvatar(displayName, photoUrl, theme)
-                  else
-                    const SizedBox(width: 36),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (widget.showSenderInfo) ...[
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                displayName,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _formatTimestamp(widget.message.timestamp),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                                  fontSize: 10,
-                                ),
-                              ),
-                              if (widget.message.isEdited) ...[
-                                const SizedBox(width: 6),
-                                Text(
-                                  '(edited)',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                        ],
-                        if (widget.message.quotedMessageContent != null) ...[
-                          _buildQuotedMessageBubble(theme),
-                          const SizedBox(height: 6),
-                        ],
-                        Text(
-                          widget.message.content,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withAlpha(220),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+
+        final bubbleMode = ref.watch(bubbleModeProvider).value ?? false;
+
+        if (bubbleMode) {
+          return _buildBubbleLayout(context, displayName, photoUrl, theme);
+        } else {
+          return _buildStandardLayout(context, displayName, photoUrl, theme);
+        }
       },
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -1062,10 +1029,283 @@ class _MessageRowState extends ConsumerState<MessageRow> {
     );
   }
 
-  Widget _buildQuotedMessageBubble(ThemeData theme) {
+  Widget _buildStandardLayout(
+    BuildContext context,
+    String displayName,
+    String photoUrl,
+    ThemeData theme,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTapDown: (details) {
+          _tapDownDetails = details;
+        },
+        onSecondaryTapDown: (details) {
+          _tapDownDetails = details;
+        },
+        onTap: () {
+          // Allows ripple effect to play on simple tap
+        },
+        onSecondaryTap: () {
+          _showPopupMenu(context);
+        },
+        onLongPress: () {
+          _showPopupMenu(context);
+        },
+        hoverColor: theme.colorScheme.onSurface.withAlpha(12),
+        splashColor: theme.colorScheme.primary.withAlpha(20),
+        highlightColor: theme.colorScheme.primary.withAlpha(10),
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: widget.showSenderInfo ? 8.0 : 1.0,
+            bottom: widget.isLastOfBlock ? 8.0 : 1.0,
+            left: 16.0,
+            right: 16.0,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.showSenderInfo)
+                _buildAvatar(displayName, photoUrl, theme)
+              else
+                const SizedBox(width: 36),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.showSenderInfo) ...[
+                      Row(
+                        children: [
+                          Text(
+                            displayName,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (widget.message.isEdited) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '(edited)',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          Text(
+                            _formatTimestamp(widget.message.timestamp),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (widget.message.quotedMessageContent != null) ...[
+                      _buildQuotedMessageBubble(
+                        theme,
+                        bubbleMode: false,
+                        isCurrentUser: widget.message.senderId == ref.read(authStateProvider).value?.uid,
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    Text(
+                      widget.message.content,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(220),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBubbleLayout(
+    BuildContext context,
+    String displayName,
+    String photoUrl,
+    ThemeData theme,
+  ) {
+    final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+    final bool isCurrentUser = widget.message.senderId == currentUserId;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        top: widget.showSenderInfo ? 6.0 : 1.0,
+        bottom: widget.isLastOfBlock ? 6.0 : 1.0,
+        left: 16.0,
+        right: 16.0,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isCurrentUser) ...[
+            if (widget.showSenderInfo)
+              _buildAvatar(displayName, photoUrl, theme)
+            else
+              const SizedBox(width: 36),
+            const SizedBox(width: 12),
+          ],
+          Flexible(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: (MediaQuery.of(context).size.width * 0.7).clamp(0.0, 600.0),
+                ),
+                decoration: BoxDecoration(
+                  color: isCurrentUser
+                      ? theme.colorScheme.primary.withAlpha(40)
+                      : theme.colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(12),
+                    topRight: const Radius.circular(12),
+                    bottomLeft: Radius.circular(
+                      isCurrentUser
+                          ? 12
+                          : (widget.isLastOfBlock ? 0 : 12),
+                    ),
+                    bottomRight: Radius.circular(
+                      isCurrentUser
+                          ? (widget.isLastOfBlock ? 0 : 12)
+                          : 12,
+                    ),
+                  ),
+                  border: Border.all(
+                    color: isCurrentUser
+                        ? theme.colorScheme.primary.withAlpha(60)
+                        : theme.colorScheme.outlineVariant.withAlpha(80),
+                  ),
+                ),
+                child: InkWell(
+                  onTapDown: (details) {
+                    _tapDownDetails = details;
+                  },
+                  onSecondaryTapDown: (details) {
+                    _tapDownDetails = details;
+                  },
+                  onTap: () {
+                    // Allows ripple effect to play on simple tap
+                  },
+                  onSecondaryTap: () {
+                    _showPopupMenu(context);
+                  },
+                  onLongPress: () {
+                    _showPopupMenu(context);
+                  },
+                  hoverColor: theme.colorScheme.onSurface.withAlpha(12),
+                  splashColor: theme.colorScheme.primary.withAlpha(20),
+                  highlightColor: theme.colorScheme.primary.withAlpha(10),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(12),
+                    topRight: const Radius.circular(12),
+                    bottomLeft: Radius.circular(
+                      isCurrentUser
+                          ? 12
+                          : (widget.isLastOfBlock ? 0 : 12),
+                    ),
+                    bottomRight: Radius.circular(
+                      isCurrentUser
+                          ? (widget.isLastOfBlock ? 0 : 12)
+                          : 12,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!isCurrentUser && widget.showSenderInfo) ...[
+                          Text(
+                            displayName,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        if (widget.message.quotedMessageContent != null) ...[
+                          _buildQuotedMessageBubble(
+                            theme,
+                            bubbleMode: true,
+                            isCurrentUser: isCurrentUser,
+                          ),
+                          const SizedBox(height: 6),
+                        ],
+                        Text(
+                          widget.message.content,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withAlpha(220),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatTimestamp(widget.message.timestamp),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                                fontSize: 9,
+                              ),
+                            ),
+                            if (widget.message.isEdited) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '(edited)',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(100),
+                                  fontSize: 9,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotedMessageBubble(
+    ThemeData theme, {
+    required bool bubbleMode,
+    required bool isCurrentUser,
+  }) {
+    final Color quoteBgColor;
+    if (bubbleMode) {
+      if (isCurrentUser) {
+        quoteBgColor = theme.colorScheme.surfaceContainerHigh;
+      } else {
+        quoteBgColor = theme.colorScheme.primary.withAlpha(40);
+      }
+    } else {
+      quoteBgColor = theme.colorScheme.surfaceContainerHigh;
+    }
+
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
+        color: quoteBgColor,
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(

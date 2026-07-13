@@ -1,6 +1,8 @@
 // Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chat/providers/auth_provider.dart';
 
 // Providers
 import 'package:chat/providers/appearance_notifier.dart';
@@ -240,6 +242,54 @@ class AppearanceSettingsPanel extends ConsumerWidget {
       );
     }
 
+    final bubbleModeAsync = ref.watch(bubbleModeProvider);
+    final bubbleMode = bubbleModeAsync.value ?? false;
+
+    Widget bubbleModeToggleContent = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Bubble Mode',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Convert chats into message bubbles, like in WhatsApp',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Switch(
+          value: bubbleMode,
+          onChanged: (newValue) async {
+            final authUser = ref.read(authStateProvider).value;
+            if (authUser != null) {
+              await FirebaseFirestore.instance
+                  .collection('user')
+                  .doc(authUser.uid)
+                  .collection('preferences')
+                  .doc('appearance')
+                  .set({
+                'bubble_mode': newValue,
+              }, SetOptions(merge: true));
+            }
+          },
+          activeColor: theme.colorScheme.primary,
+        ),
+      ],
+    );
+
     Widget content = Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600),
@@ -290,6 +340,11 @@ class AppearanceSettingsPanel extends ConsumerWidget {
                     color: theme.colorScheme.outlineVariant.withAlpha(80),
                   ),
                   themeContent,
+                  Divider(
+                    height: 32,
+                    color: theme.colorScheme.outlineVariant.withAlpha(80),
+                  ),
+                  bubbleModeToggleContent,
                 ],
               ),
             ),

@@ -2,6 +2,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chat/providers/auth_provider.dart';
 
 class AppearanceState {
   final ThemeMode themeMode;
@@ -79,3 +81,21 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
 }
 
 final appearanceProvider = NotifierProvider<AppearanceNotifier, AppearanceState>(AppearanceNotifier.new);
+
+final bubbleModeProvider = StreamProvider<bool>((ref) {
+  final authUser = ref.watch(authStateProvider).value;
+  if (authUser == null) return Stream.value(false);
+
+  return FirebaseFirestore.instance
+      .collection('user')
+      .doc(authUser.uid)
+      .collection('preferences')
+      .doc('appearance')
+      .snapshots()
+      .map((snapshot) {
+        if (snapshot.exists && snapshot.data() != null) {
+          return snapshot.data()?['bubble_mode'] as bool? ?? false;
+        }
+        return false;
+      });
+});
