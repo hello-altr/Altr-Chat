@@ -505,16 +505,13 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          if (channel.isPrivate) ...[
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ActionButton(
-                                icon: Icons.person_add_outlined,
-                                label: 'Add Member',
-                                onTap: () => _showAddMemberDialog(workspaceId, channel),
-                              ),
+                          Expanded(
+                            child: ActionButton(
+                              icon: Icons.person_add_outlined,
+                              label: 'Add Member',
+                              onTap: () => _showAddMemberDialog(workspaceId, channel),
                             ),
-                          ],
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: ActionButton(
@@ -536,9 +533,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                         padding: const EdgeInsets.all(16.0),
                         child: membersAsync.when(
                           data: (users) {
-                            final channelUsers = channel.isPrivate
-                                ? users.where((u) => channel.members.contains(u.userId)).toList()
-                                : users;
+                            final channelUsers = users.where((u) => channel.members.contains(u.userId)).toList();
 
                             final channelOwner = channelUsers.where((u) => u.userId == channel.createdBy).toList();
                             final otherManagers = channelUsers.where((u) =>
@@ -553,17 +548,17 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                               children: [
                                 if (channelOwner.isNotEmpty) ...[
                                   _buildRoleSectionHeader(theme, 'Channel Owner'),
-                                  ...channelOwner.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, true, false, channel.isPrivate)),
+                                  ...channelOwner.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, true, false)),
                                   const SizedBox(height: 12),
                                 ],
                                 if (otherManagers.isNotEmpty) ...[
                                   _buildRoleSectionHeader(theme, 'Channel Managers'),
-                                  ...otherManagers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, true, channel.isPrivate)),
+                                  ...otherManagers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, true)),
                                   const SizedBox(height: 12),
                                 ],
                                 if (regularMembers.isNotEmpty) ...[
                                   _buildRoleSectionHeader(theme, 'Members'),
-                                  ...regularMembers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, false, channel.isPrivate)),
+                                  ...regularMembers.map((u) => _buildParticipantRow(theme, u, workspaceId, channel.id, isAuthorized, currentUserId, false, false)),
                                 ],
                               ],
                             );
@@ -612,7 +607,6 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
     String currentUserId,
     bool isOwner,
     bool isManager,
-    bool isChannelPrivate,
   ) {
     final displayName = user.displayName;
     final photoUrl = user.photoUrl;
@@ -679,7 +673,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                       ],
                     ),
                   ),
-                if (!isOwner && isChannelPrivate)
+                if (!isOwner)
                   PopupMenuItem(
                     value: 'remove',
                     child: Row(

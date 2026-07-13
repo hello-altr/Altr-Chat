@@ -1,0 +1,55 @@
+{
+  "fill-specializations" : [
+    {
+      "value" : {
+        "solid" : "display-p3:0.97461,0.99902,0.85449,1.00000"
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "solid" : "display-p3:0.07120,0.09535,0.04510,1.00000"
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "image-name-specializations" : [
+            {
+              "value" : "chat-01.svg"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "chat-01-1.svg"
+            }
+          ],
+          "name" : "chat-01-1",
+          "position" : {
+            "scale" : 1.11,
+            "translation-in-points" : [
+              0,
+              44.6328125
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
