@@ -143,9 +143,7 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
 
       if (value == 'info') {
         if (isChannel) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Channel Info: ${widget.title}')),
-          );
+          // Do nothing on info, or open info panel if needed.
         } else {
           final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
           final parts = widget.id.split('_');
@@ -168,9 +166,6 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
               workspaceId: activeWorkspaceId,
               id: widget.id,
               isChannel: isChannel,
-            );
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Chat history cleared.')),
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -196,9 +191,6 @@ class _SidebarItemTileState extends ConsumerState<SidebarItemTile> {
               workspaceId: activeWorkspaceId,
               id: widget.id,
               isChannel: isChannel,
-            );
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Chat deleted.')),
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(

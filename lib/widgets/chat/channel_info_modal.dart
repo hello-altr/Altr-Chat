@@ -71,12 +71,6 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
         setState(() {
           _isEditingName = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Channel name updated successfully.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -108,19 +102,37 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
         'managers': FieldValue.arrayUnion([userId])
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Promoted $displayName to Channel Manager.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // Promoted successfully, no snackbar shown
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to promote user: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _demoteManagerToMember(String workspaceId, String channelId, String userId, String displayName) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('workspaces')
+          .doc(workspaceId)
+          .collection('channels')
+          .doc(channelId)
+          .update({
+        'managers': FieldValue.arrayRemove([userId])
+      });
+
+      // Demoted successfully, no snackbar shown
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to demote user: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -137,17 +149,11 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
           .collection('channels')
           .doc(channelId)
           .update({
-            'members': FieldValue.arrayRemove([userId])
+            'members': FieldValue.arrayRemove([userId]),
+            'managers': FieldValue.arrayRemove([userId]),
           });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Removed $displayName from channel.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // Removed successfully, no snackbar shown
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -190,12 +196,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
         type: ChatSessionType.channel,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Channel archived successfully.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      // Archived successfully, no snackbar shown
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -657,6 +658,8 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
               onSelected: (action) {
                 if (action == 'promote') {
                   _promoteMemberToManager(workspaceId, channelId, user.userId, displayName);
+                } else if (action == 'demote') {
+                  _demoteManagerToMember(workspaceId, channelId, user.userId, displayName);
                 } else if (action == 'remove') {
                   _removeMemberFromChannel(workspaceId, channelId, user.userId, displayName);
                 }
@@ -670,6 +673,17 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                         Icon(Icons.admin_panel_settings_outlined, size: 18),
                         SizedBox(width: 8),
                         Text('Promote to Manager'),
+                      ],
+                    ),
+                  ),
+                if (isManager && !isOwner)
+                  const PopupMenuItem(
+                    value: 'demote',
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_outline, size: 18),
+                        SizedBox(width: 8),
+                        Text('Demote to Member'),
                       ],
                     ),
                   ),
@@ -1018,12 +1032,6 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
                           });
 
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Added ${_selectedUserIds.length} member(s) to the channel.'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
                             onClose();
                           }
                         } catch (e) {

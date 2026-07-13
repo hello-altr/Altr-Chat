@@ -107,13 +107,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
           type: ChatSessionType.dm,
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Opening chat with $targetDisplayName...'),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // Opening chat session
       }
     } catch (e) {
       if (mounted) {
@@ -148,13 +142,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
       await batch.commit();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Removed $displayName from workspace.'),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // User removed successfully
       }
     } catch (e) {
       if (mounted) {
@@ -178,13 +166,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Promoted $displayName to Workspace Manager.'),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // User promoted successfully
       }
     } catch (e) {
       if (mounted) {
@@ -260,13 +242,6 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
 
                     if (context.mounted) {
                       Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('User Group "@$handle" created successfully!'),
-                          backgroundColor: theme.colorScheme.primary,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
                     }
                   } catch (e) {
                     if (context.mounted) {
@@ -361,13 +336,6 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                           
                           if (context.mounted) {
                             Navigator.pop(dialogContext);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Added $displayName to group.'),
-                                backgroundColor: theme.colorScheme.primary,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
                           }
                         } catch (e) {
                           if (context.mounted) {
@@ -404,13 +372,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
           .update({'is_promoted': !isCurrentlyPromoted});
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isCurrentlyPromoted ? 'Revoked group promotion.' : 'Promoted user group!'),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // Group promotion updated successfully
       }
     } catch (e) {
       if (mounted) {
@@ -436,13 +398,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
           .delete();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Deleted user group "$name".'),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // Group deleted successfully
       }
     } catch (e) {
       if (mounted) {

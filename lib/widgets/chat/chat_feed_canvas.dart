@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 
 // Providers & Models
 import 'package:chat/providers/chat_session_provider.dart';
@@ -54,6 +55,7 @@ class ChatFeedCanvas extends ConsumerStatefulWidget {
 
 class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
   late TextEditingController _controller;
+  final FocusNode _inputFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -83,6 +85,7 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
   void dispose() {
     _controller.removeListener(_syncTextWithProvider);
     _controller.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -146,6 +149,124 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
     }
   }
 
+  Future<void> _updateMessage(String messageId, String newContent) async {
+    final workspaceId = ref.read(currentWorkspaceIdProvider);
+    if (workspaceId == null) return;
+
+    final chatSession = ref.read(activeChatSessionProvider);
+    final isChannel = chatSession.type == ChatSessionType.channel;
+    final collectionPath = isChannel ? 'channels' : 'dms';
+    final activeId = widget.chatId ?? '';
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('workspaces')
+          .doc(workspaceId)
+          .collection(collectionPath)
+          .doc(activeId)
+          .collection('messages')
+          .doc(messageId)
+          .update({
+        'content': newContent,
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update message: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteMessage(String messageId) async {
+    final workspaceId = ref.read(currentWorkspaceIdProvider);
+    if (workspaceId == null) return;
+
+    final chatSession = ref.read(activeChatSessionProvider);
+    final isChannel = chatSession.type == ChatSessionType.channel;
+    final collectionPath = isChannel ? 'channels' : 'dms';
+    final activeId = widget.chatId ?? '';
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('workspaces')
+          .doc(workspaceId)
+          .collection(collectionPath)
+          .doc(activeId)
+          .collection('messages')
+          .doc(messageId)
+          .delete();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete message: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditDialog(BuildContext context, MessageModel message) {
+    final controller = TextEditingController(text: message.content);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Message'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'Edit your message...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newContent = controller.text.trim();
+              if (newContent.isNotEmpty) {
+                Navigator.pop(ctx);
+                await _updateMessage(message.id, newContent);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext context, MessageModel message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Message'),
+        content: const Text('Are you sure you want to permanently delete this message?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _deleteMessage(message.id);
+            },
+            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -189,6 +310,7 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.surfaceContainer,
         automaticallyImplyLeading: false, // Custom back button used on mobile
         titleSpacing: isMobile ? 0 : 16,
         leading: isMobile
@@ -325,7 +447,45 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    return MessageRow(message: message);
+                    final bool showSenderInfo = index + 1 >= messages.length ||
+                        messages[index + 1].senderId != message.senderId;
+
+                    return MessageRow(
+                      message: message,
+                      showSenderInfo: showSenderInfo,
+                      onQuote: (text) {
+                        final currentText = _controller.text;
+                        _controller.text = '> $text\n$currentText';
+                      },
+                      onStartThread: (msg) {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Start a Thread'),
+                            content: const Text('Threads will be integrated soon!'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      onEdit: (msg) {
+                        _showEditDialog(context, msg);
+                      },
+                      onDelete: (msg) {
+                        _showDeleteConfirmDialog(context, msg);
+                      },
+                      onShowMenu: () {
+                        if (_inputFocusNode.hasFocus) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _inputFocusNode.requestFocus();
+                          });
+                        }
+                      },
+                    );
                   },
                 );
               },
@@ -346,44 +506,78 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                   ),
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: theme.colorScheme.outlineVariant.withAlpha(80),
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _controller,
-                        onSubmitted: (_) => _sendMessage(),
-                        decoration: InputDecoration(
-                          hintText: 'Type your message here...',
-                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Focus(
+                        onKeyEvent: (node, event) {
+                          if (!isMobile && event is KeyDownEvent) {
+                            if (event.logicalKey == LogicalKeyboardKey.enter ||
+                                event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+                              final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+                              if (!isShiftPressed) {
+                                _sendMessage();
+                                return KeyEventResult.handled;
+                              }
+                            }
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _inputFocusNode,
+                          minLines: 1,
+                          maxLines: 4,
+                          keyboardType: TextInputType.multiline,
+                          textInputAction: TextInputAction.newline,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: theme.colorScheme.surfaceContainerHigh,
+                            hintText: 'Type your message here...',
+                            hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(
+                                color: theme.colorScheme.outlineVariant.withAlpha(80),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(
+                                color: theme.colorScheme.outlineVariant.withAlpha(80),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(
+                                color: theme.colorScheme.primary,
+                                width: 2,
+                              ),
+                            ),
                           ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          style: theme.textTheme.bodyMedium,
                         ),
-                        style: theme.textTheme.bodyMedium,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _sendMessage,
-                    icon: const Icon(HugeIconsStroke.sent),
-                    style: IconButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                      minimumSize: const Size(48, 48),
-                      maximumSize: const Size(48, 48),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _sendMessage,
+                      icon: const Icon(HugeIconsStroke.sent),
+                      style: IconButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        minimumSize: const Size(48, 48),
+                        maximumSize: const Size(48, 48),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
         ],
@@ -392,61 +586,314 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
   }
 }
 
-class MessageRow extends ConsumerWidget {
+class MessageRow extends ConsumerStatefulWidget {
   final MessageModel message;
-  const MessageRow({super.key, required this.message});
+  final bool showSenderInfo;
+  final Function(String text) onQuote;
+  final Function(MessageModel message) onStartThread;
+  final Function(MessageModel message) onEdit;
+  final Function(MessageModel message) onDelete;
+  final VoidCallback onShowMenu;
+
+  const MessageRow({
+    super.key,
+    required this.message,
+    required this.showSenderInfo,
+    required this.onQuote,
+    required this.onStartThread,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onShowMenu,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MessageRow> createState() => _MessageRowState();
+}
+
+class _MessageRowState extends ConsumerState<MessageRow> {
+  TapDownDetails? _tapDownDetails;
+  OverlayEntry? _overlayEntry;
+
+  void _hidePopupMenu() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _hidePopupMenu();
+    super.dispose();
+  }
+
+  void _showPopupMenu(BuildContext context) {
+    if (_tapDownDetails == null) return;
+    widget.onShowMenu();
+
+    final overlay = Overlay.of(context);
+
+    final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+    final workspace = ref.read(currentWorkspaceProvider);
+    final chatSession = ref.read(activeChatSessionProvider);
+    final isChannel = chatSession.type == ChatSessionType.channel;
+
+    bool isSender = widget.message.senderId == currentUserId;
+    bool isCreator = false;
+    bool isManager = false;
+
+    if (isChannel && chatSession.chatId != null) {
+      final channelAsync = ref.read(activeChannelProvider(chatSession.chatId!));
+      final channel = channelAsync.value;
+      if (channel != null) {
+        isCreator = channel.createdBy == currentUserId;
+        isManager = channel.managers.contains(currentUserId);
+      }
+    }
+
+    if (workspace != null) {
+      final workspaceCreator = workspace['created_by'] ?? '';
+      final workspaceManagers = List<String>.from(workspace['managers'] ?? []);
+      if (workspaceCreator == currentUserId) {
+        isCreator = true;
+      }
+      if (workspaceManagers.contains(currentUserId)) {
+        isManager = true;
+      }
+    }
+
+    final bool canDelete = isSender || isCreator || isManager;
+
+    int itemCount = 2; // Quote and Thread
+    if (isSender) itemCount++;
+    if (canDelete) itemCount++;
+
+    final double menuHeight = itemCount * 48.0 + 16.0;
+    const double menuWidth = 200.0;
+    final tapX = _tapDownDetails!.globalPosition.dx;
+    final tapY = _tapDownDetails!.globalPosition.dy;
     final theme = Theme.of(context);
-    final userAsync = ref.watch(userProfileByIdProvider(message.senderId));
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) {
+        final size = MediaQuery.of(context).size;
+        final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+        final visibleHeight = size.height - keyboardHeight;
+
+        double left = tapX;
+        if (left + menuWidth > size.width - 16.0) {
+          left = size.width - menuWidth - 16.0;
+        }
+        if (left < 16.0) left = 16.0;
+
+        double adjustedTapY = tapY;
+        if (adjustedTapY > visibleHeight - 16.0) {
+          adjustedTapY = visibleHeight - 16.0;
+        }
+
+        double? topPosition;
+        double? bottomPosition;
+
+        if (adjustedTapY + menuHeight < visibleHeight - 16.0) {
+          topPosition = adjustedTapY;
+        } else {
+          bottomPosition = size.height - adjustedTapY;
+          if (bottomPosition < keyboardHeight + 16.0) {
+            bottomPosition = keyboardHeight + 16.0;
+          }
+        }
+
+        return Stack(
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _hidePopupMenu,
+              onPanDown: (_) => _hidePopupMenu(),
+              child: const SizedBox.expand(),
+            ),
+            Positioned(
+              left: left,
+              top: topPosition,
+              bottom: bottomPosition,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(12),
+                color: theme.colorScheme.surfaceContainerHigh,
+                child: Container(
+                  width: menuWidth,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withAlpha(80),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildOverlayItem(
+                        icon: Icons.format_quote_outlined,
+                        text: 'Quote Message',
+                        onTap: () {
+                          _hidePopupMenu();
+                          widget.onQuote(widget.message.content);
+                        },
+                        theme: theme,
+                      ),
+                      _buildOverlayItem(
+                        icon: Icons.forum_outlined,
+                        text: 'Start a Thread',
+                        onTap: () {
+                          _hidePopupMenu();
+                          widget.onStartThread(widget.message);
+                        },
+                        theme: theme,
+                      ),
+                      if (isSender)
+                        _buildOverlayItem(
+                          icon: Icons.edit_outlined,
+                          text: 'Edit Message',
+                          onTap: () {
+                            _hidePopupMenu();
+                            widget.onEdit(widget.message);
+                          },
+                          theme: theme,
+                        ),
+                      if (canDelete)
+                        _buildOverlayItem(
+                          icon: Icons.delete_outline,
+                          text: 'Delete Message',
+                          textColor: theme.colorScheme.error,
+                          iconColor: theme.colorScheme.error,
+                          onTap: () {
+                            _hidePopupMenu();
+                            widget.onDelete(widget.message);
+                          },
+                          theme: theme,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    overlay.insert(_overlayEntry!);
+  }
+
+  Widget _buildOverlayItem({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+    required ThemeData theme,
+    Color? textColor,
+    Color? iconColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: iconColor ?? theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textColor ?? theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final userAsync = ref.watch(userProfileByIdProvider(widget.message.senderId));
 
     return userAsync.when(
       data: (user) {
-        final displayName = user?.displayName ?? message.senderName;
-        final photoUrl = user?.photoUrl ?? message.senderPhotoUrl;
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAvatar(displayName, photoUrl, theme),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
+        final displayName = user?.displayName ?? widget.message.senderName;
+        final photoUrl = user?.photoUrl ?? widget.message.senderPhotoUrl;
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTapDown: (details) {
+              _tapDownDetails = details;
+            },
+            onSecondaryTapDown: (details) {
+              _tapDownDetails = details;
+            },
+            onTap: () {
+              // Allows ripple effect to play on simple tap
+            },
+            onSecondaryTap: () {
+              _showPopupMenu(context);
+            },
+            onLongPress: () {
+              _showPopupMenu(context);
+            },
+            hoverColor: theme.colorScheme.onSurface.withAlpha(12),
+            splashColor: theme.colorScheme.primary.withAlpha(20),
+            highlightColor: theme.colorScheme.primary.withAlpha(10),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: widget.showSenderInfo ? 8.0 : 2.0,
+                horizontal: 16.0,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.showSenderInfo)
+                    _buildAvatar(displayName, photoUrl, theme)
+                  else
+                    const SizedBox(width: 36),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          displayName,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                        if (widget.showSenderInfo) ...[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                displayName,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _formatTimestamp(widget.message.timestamp),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
+                          const SizedBox(height: 4),
+                        ],
                         Text(
-                          _formatTimestamp(message.timestamp),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                            fontSize: 10,
+                          widget.message.content,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withAlpha(220),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message.content,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withAlpha(220),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },

@@ -47,15 +47,7 @@ class _WorkspaceInfoPageState extends ConsumerState<WorkspaceInfoPage> {
           .doc(workspaceId)
           .update({'visibility': nextVisibility});
           
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Workspace visibility updated to $nextVisibility!'),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // Visibility updated successfully, no snackbar shown
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -120,13 +112,6 @@ class _WorkspaceInfoPageState extends ConsumerState<WorkspaceInfoPage> {
                     
                     if (context.mounted) {
                       Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Workspace info updated successfully!'),
-                          backgroundColor: theme.colorScheme.primary,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
                     }
                   } catch (e) {
                     if (context.mounted) {
