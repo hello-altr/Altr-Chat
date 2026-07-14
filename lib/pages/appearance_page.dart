@@ -1,8 +1,6 @@
 // Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:chat/providers/auth_provider.dart';
 
 // Providers
 import 'package:chat/providers/appearance_notifier.dart';
@@ -242,8 +240,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
       );
     }
 
-    final bubbleModeAsync = ref.watch(bubbleModeProvider);
-    final bubbleMode = bubbleModeAsync.value ?? false;
+    final bubbleMode = ref.watch(bubbleModeProvider);
 
     Widget bubbleModeToggleContent = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,17 +270,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
         Switch(
           value: bubbleMode,
           onChanged: (newValue) async {
-            final authUser = ref.read(authStateProvider).value;
-            if (authUser != null) {
-              await FirebaseFirestore.instance
-                  .collection('user')
-                  .doc(authUser.uid)
-                  .collection('preferences')
-                  .doc('appearance')
-                  .set({
-                'bubble_mode': newValue,
-              }, SetOptions(merge: true));
-            }
+            await ref.read(bubbleModeProvider.notifier).setBubbleMode(newValue);
           },
           activeColor: theme.colorScheme.primary,
         ),

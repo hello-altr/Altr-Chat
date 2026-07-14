@@ -2,8 +2,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:chat/providers/auth_provider.dart';
 
 class AppearanceState {
   final ThemeMode themeMode;
@@ -82,20 +80,23 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
 
 final appearanceProvider = NotifierProvider<AppearanceNotifier, AppearanceState>(AppearanceNotifier.new);
 
-final bubbleModeProvider = StreamProvider<bool>((ref) {
-  final authUser = ref.watch(authStateProvider).value;
-  if (authUser == null) return Stream.value(false);
+class BubbleModeNotifier extends Notifier<bool> {
+  static const String _bubbleModeKey = "altr_bubble_mode";
 
-  return FirebaseFirestore.instance
-      .collection('user')
-      .doc(authUser.uid)
-      .collection('preferences')
-      .doc('appearance')
-      .snapshots()
-      .map((snapshot) {
-        if (snapshot.exists && snapshot.data() != null) {
-          return snapshot.data()?['bubble_mode'] as bool? ?? false;
-        }
-        return false;
-      });
-});
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_bubbleModeKey) ?? false;
+  }
+
+  Future<void> setBubbleMode(bool value) async {
+    state = value;
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      await prefs.setBool(_bubbleModeKey, value);
+    } catch (_) {}
+  }
+}
+
+final bubbleModeProvider = NotifierProvider<BubbleModeNotifier, bool>(BubbleModeNotifier.new);
+

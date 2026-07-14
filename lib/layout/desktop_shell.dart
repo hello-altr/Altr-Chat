@@ -177,8 +177,15 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                             controller: _sidebarPageController,
                             onPageChanged: (index) {
                               ref.read(navIndexProvider.notifier).state = index;
-                              // Clear chat session trace
-                              ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                              // Clear chat session trace if it doesn't match the new tab type
+                              final currentSession = ref.read(activeChatSessionProvider);
+                              if (index == 0 && currentSession.type != ChatSessionType.dm) {
+                                ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                              } else if (index == 1 && currentSession.type != ChatSessionType.channel) {
+                                ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                              } else if (index == 2) {
+                                ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
+                              }
                               ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
                             },
                             children: const [

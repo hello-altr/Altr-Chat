@@ -22,7 +22,7 @@ class ThemePreviewWindow extends ConsumerWidget {
     final seedColor = selectedColor;
     final hsl = HSLColor.fromColor(seedColor);
 
-    final bubbleMode = ref.watch(bubbleModeProvider).value ?? false;
+    final bubbleMode = ref.watch(bubbleModeProvider);
 
     final lightWallpaper = LinearGradient(
       begin: Alignment.topRight,

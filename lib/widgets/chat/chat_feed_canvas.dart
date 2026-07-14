@@ -14,6 +14,7 @@ import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/repositories/chat_repository.dart';
 import 'package:chat/models/message_model.dart';
 import 'package:chat/providers/appearance_notifier.dart';
+import 'package:chat/providers/nav_provider.dart';
 
 // Enums
 import 'package:chat/enums/layout_mode.dart';
@@ -852,10 +853,12 @@ class _MessageRowState extends ConsumerState<MessageRow> {
     }
 
     final bool canDelete = isSender || isCreator || isManager;
+    final bool showStartDM = isChannel && widget.message.senderId != currentUserId;
 
     int itemCount = 2; // Quote and Thread
     if (isSender) itemCount++;
     if (canDelete) itemCount++;
+    if (showStartDM) itemCount++;
 
     final double menuHeight = itemCount * 48.0 + 16.0;
     const double menuWidth = 200.0;
@@ -938,6 +941,41 @@ class _MessageRowState extends ConsumerState<MessageRow> {
                         },
                         theme: theme,
                       ),
+                      if (showStartDM)
+                        _buildOverlayItem(
+                          icon: Icons.chat_bubble_outline,
+                          text: 'Start DM',
+                          onTap: () async {
+                            _hidePopupMenu();
+                            final workspaceId = ref.read(currentWorkspaceIdProvider) ?? '';
+                            if (workspaceId.isNotEmpty && currentUserId.isNotEmpty) {
+                              try {
+                                final repo = ref.read(chatRepositoryProvider);
+                                final dmId = await repo.initializeDM(
+                                  workspaceId: workspaceId,
+                                  currentUserId: currentUserId,
+                                  targetUserId: widget.message.senderId,
+                                );
+                                ref.read(navIndexProvider.notifier).state = 0; // Navigates to DMs section
+                                ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
+                                  chatId: dmId,
+                                  type: ChatSessionType.dm,
+                                );
+                                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to start conversation: $e'),
+                                      backgroundColor: theme.colorScheme.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          theme: theme,
+                        ),
                       if (isSender)
                         _buildOverlayItem(
                           icon: Icons.edit_outlined,
@@ -1013,7 +1051,7 @@ class _MessageRowState extends ConsumerState<MessageRow> {
         final displayName = user?.displayName ?? widget.message.senderName;
         final photoUrl = user?.photoUrl ?? widget.message.senderPhotoUrl;
 
-        final bubbleMode = ref.watch(bubbleModeProvider).value ?? false;
+        final bubbleMode = ref.watch(bubbleModeProvider);
 
         if (bubbleMode) {
           return _buildBubbleLayout(context, displayName, photoUrl, theme);
