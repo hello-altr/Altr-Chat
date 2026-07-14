@@ -13,7 +13,7 @@ import 'dart:developer';
 import 'package:chat/layout_shell.dart';
 
 // Providers
-import 'package:chat/providers/appearance_notifier.dart';
+import 'package:chat/providers/appearance_notifier.dart'; 
 import 'package:chat/providers/auth_provider.dart';
 
 // Services

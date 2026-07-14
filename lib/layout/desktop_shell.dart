@@ -10,6 +10,7 @@ import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
 import 'package:chat/widgets/workspace_dropdown_switcher.dart';
+import 'package:chat/widgets/chat/channel_info_modal.dart';
 import 'package:chat/widgets/floating_nav_pill.dart';
 import 'package:chat/widgets/empty_state.dart';
 
@@ -21,9 +22,8 @@ import 'package:chat/pages/workspace_info.dart';
 import 'package:chat/pages/channels_page.dart';
 import 'package:chat/pages/settings_page.dart';
 import 'package:chat/pages/profile_page.dart';
-import 'package:chat/pages/dms_page.dart';
 import 'package:chat/pages/user_page.dart';
-import 'package:chat/widgets/chat/channel_info_modal.dart';
+import 'package:chat/pages/dms_page.dart';
 
 class DesktopShell extends ConsumerStatefulWidget {
   const DesktopShell({super.key});

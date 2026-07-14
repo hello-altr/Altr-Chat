@@ -4,17 +4,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 
-// Providers & Models
+// Providers
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/chat_state_provider.dart';
+import 'package:chat/providers/appearance_notifier.dart';
+import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
-import 'package:chat/providers/settings_provider.dart';
-import 'package:chat/repositories/chat_repository.dart';
-import 'package:chat/models/message_model.dart';
-import 'package:chat/providers/appearance_notifier.dart';
 import 'package:chat/providers/nav_provider.dart';
+
+// Repositories
+import 'package:chat/repositories/chat_repository.dart';
+
+// Models
+import 'package:chat/models/message_model.dart';
+import 'package:chat/models/user_model.dart';
 
 // Enums
 import 'package:chat/enums/layout_mode.dart';
@@ -41,6 +47,21 @@ final messagesStreamProvider = StreamProvider.family<List<MessageModel>, String>
       });
 });
 
+final _workspaceUserGroupsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, workspaceId) {
+  return FirebaseFirestore.instance
+      .collection('workspaces')
+      .doc(workspaceId)
+      .collection('user_groups')
+      .snapshots()
+      .map((snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              ...data,
+            };
+          }).toList());
+});
+
 class ChatFeedCanvas extends ConsumerStatefulWidget {
   final String? chatId;
   final bool isReadOnly;
@@ -61,23 +82,27 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
   MessageModel? _quotedMessage;
   MessageModel? _editingMessage;
 
+  bool _showMentionPopup = false;
+  String _mentionQuery = '';
+  int _mentionIndex = -1;
+
   @override
   void initState() {
     super.initState();
     final initialText = ref.read(messageDraftProvider(widget.chatId ?? ''));
     _controller = TextEditingController(text: initialText);
-    _controller.addListener(_syncTextWithProvider);
+    _controller.addListener(_onTextChanged);
   }
 
   @override
   void didUpdateWidget(ChatFeedCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.chatId != widget.chatId) {
-      _controller.removeListener(_syncTextWithProvider);
+      _controller.removeListener(_onTextChanged);
       _controller.dispose();
       final initialText = ref.read(messageDraftProvider(widget.chatId ?? ''));
       _controller = TextEditingController(text: initialText);
-      _controller.addListener(_syncTextWithProvider);
+      _controller.addListener(_onTextChanged);
     }
   }
 
@@ -85,9 +110,63 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
     ref.read(messageDraftProvider(widget.chatId ?? '').notifier).state = _controller.text;
   }
 
+  void _onTextChanged() {
+    _syncTextWithProvider();
+
+    final text = _controller.text;
+    final selection = _controller.selection;
+    final cursor = selection.baseOffset;
+
+    if (cursor >= 0) {
+      final textBeforeCursor = text.substring(0, cursor);
+      final atIndex = textBeforeCursor.lastIndexOf('@');
+      if (atIndex != -1) {
+        final substring = textBeforeCursor.substring(atIndex + 1);
+        final bool isWordBoundary = atIndex == 0 ||
+            RegExp(r'\s').hasMatch(textBeforeCursor.substring(atIndex - 1, atIndex));
+
+        if (isWordBoundary && !substring.contains(' ')) {
+          setState(() {
+            _showMentionPopup = true;
+            _mentionQuery = substring;
+            _mentionIndex = atIndex;
+          });
+          return;
+        }
+      }
+    }
+
+    if (_showMentionPopup) {
+      setState(() {
+        _showMentionPopup = false;
+        _mentionQuery = '';
+        _mentionIndex = -1;
+      });
+    }
+  }
+
+  void _selectMention(String handle) {
+    final text = _controller.text;
+    final cursor = _controller.selection.baseOffset;
+    if (cursor >= 0 && _mentionIndex != -1) {
+      final beforeMention = text.substring(0, _mentionIndex);
+      final afterCursor = text.substring(cursor);
+      final newText = '$beforeMention@$handle $afterCursor';
+      _controller.text = newText;
+      _controller.selection = TextSelection.collapsed(
+        offset: _mentionIndex + handle.length + 2, // +1 for @, +1 for space
+      );
+    }
+    setState(() {
+      _showMentionPopup = false;
+      _mentionQuery = '';
+      _mentionIndex = -1;
+    });
+  }
+
   @override
   void dispose() {
-    _controller.removeListener(_syncTextWithProvider);
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _inputFocusNode.dispose();
     super.dispose();
@@ -384,6 +463,157 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
             child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMentionPopup(BuildContext context, ThemeData theme, String workspaceId) {
+    final workspaceMembersAsync = ref.watch(workspaceMembersStreamProvider(workspaceId));
+    final userGroupsAsync = ref.watch(_workspaceUserGroupsProvider(workspaceId));
+
+    if (!workspaceMembersAsync.hasValue || !userGroupsAsync.hasValue) {
+      return const SizedBox.shrink();
+    }
+
+    final members = workspaceMembersAsync.value ?? [];
+    final groups = userGroupsAsync.value ?? [];
+
+    final query = _mentionQuery.toLowerCase();
+    final chatSession = ref.watch(activeChatSessionProvider);
+    final activeId = widget.chatId ?? '';
+
+    List<Map<String, dynamic>> items = [];
+
+    // 1. Add matching users in this chat
+    if (chatSession.type == ChatSessionType.channel) {
+      final channel = ref.watch(activeChannelProvider(activeId)).value;
+      if (channel != null) {
+        final channelUsers = members.where((u) => channel.members.contains(u.userId));
+        for (final user in channelUsers) {
+          if (query.isEmpty ||
+              user.displayName.toLowerCase().contains(query) ||
+              user.userName.toLowerCase().contains(query)) {
+            items.add({
+              'id': user.userId,
+              'name': user.displayName,
+              'handle': user.userName,
+              'type': 'user',
+              'photoUrl': user.photoUrl,
+            });
+          }
+        }
+      }
+    } else if (chatSession.type == ChatSessionType.dm) {
+      final dm = ref.watch(activeDmProvider(activeId)).value;
+      if (dm != null) {
+        final dmUsers = members.where((u) => dm.participants.contains(u.userId));
+        for (final user in dmUsers) {
+          if (query.isEmpty ||
+              user.displayName.toLowerCase().contains(query) ||
+              user.userName.toLowerCase().contains(query)) {
+            items.add({
+              'id': user.userId,
+              'name': user.displayName,
+              'handle': user.userName,
+              'type': 'user',
+              'photoUrl': user.photoUrl,
+            });
+          }
+        }
+      }
+    }
+
+    // 2. Add matching workspace user groups
+    for (final group in groups) {
+      final name = group['name'] ?? '';
+      final handle = group['handle'] ?? '';
+      if (query.isEmpty ||
+          name.toLowerCase().contains(query) ||
+          handle.toLowerCase().contains(query)) {
+        items.add({
+          'id': group['id'],
+          'name': name,
+          'handle': handle,
+          'type': 'group',
+        });
+      }
+    }
+
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Limit to 5 items to keep it clean and compact
+    final displayItems = items.take(5).toList();
+
+    return Card(
+      elevation: 6,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: theme.colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withAlpha(80),
+        ),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 180),
+        child: ListView.builder(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          itemCount: displayItems.length,
+          itemBuilder: (context, index) {
+            final item = displayItems[index];
+            final isUser = item['type'] == 'user';
+            final name = item['name'] ?? '';
+            final handle = item['handle'] ?? '';
+
+            Widget leading;
+            if (isUser) {
+              final photoUrl = item['photoUrl'] as String? ?? '';
+              if (photoUrl.isNotEmpty) {
+                leading = CircleAvatar(
+                  radius: 16,
+                  backgroundImage: NetworkImage(photoUrl),
+                );
+              } else {
+                leading = CircleAvatar(
+                  radius: 16,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              }
+            } else {
+              leading = CircleAvatar(
+                radius: 16,
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                child: Icon(
+                  Icons.group_outlined,
+                  color: theme.colorScheme.secondary,
+                  size: 16,
+                ),
+              );
+            }
+
+            return ListTile(
+              dense: true,
+              leading: leading,
+              title: Text(
+                name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text('@$handle'),
+              onTap: () => _selectMention(handle),
+            );
+          },
+        ),
       ),
     );
   }
@@ -687,6 +917,8 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
                       _buildQuotePreview(theme),
                     if (_editingMessage != null)
                       _buildEditPreview(theme),
+                    if (_showMentionPopup && workspaceId != null)
+                      _buildMentionPopup(context, theme, workspaceId),
                     Padding(
                       padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 8),
                       child: Row(
@@ -1152,8 +1384,8 @@ class _MessageRowState extends ConsumerState<MessageRow> {
                       ),
                       const SizedBox(height: 6),
                     ],
-                    Text(
-                      widget.message.content,
+                    MentionText(
+                      content: widget.message.content,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withAlpha(220),
                       ),
@@ -1283,8 +1515,8 @@ class _MessageRowState extends ConsumerState<MessageRow> {
                           ),
                           const SizedBox(height: 6),
                         ],
-                        Text(
-                          widget.message.content,
+                        MentionText(
+                          content: widget.message.content,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurface.withAlpha(220),
                           ),
@@ -1428,5 +1660,128 @@ class _MessageRowState extends ConsumerState<MessageRow> {
     final hour = timestamp.hour.toString().padLeft(2, '0');
     final minute = timestamp.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+}
+
+class MentionText extends ConsumerWidget {
+  final String content;
+  final TextStyle? style;
+
+  const MentionText({
+    super.key,
+    required this.content,
+    this.style,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final workspaceId = ref.watch(currentWorkspaceIdProvider) ?? '';
+    if (workspaceId.isEmpty) {
+      return Text(content, style: style);
+    }
+
+    final workspaceMembersAsync = ref.watch(workspaceMembersStreamProvider(workspaceId));
+    final userGroupsAsync = ref.watch(_workspaceUserGroupsProvider(workspaceId));
+
+    if (!workspaceMembersAsync.hasValue || !userGroupsAsync.hasValue) {
+      return Text(content, style: style);
+    }
+
+    final members = workspaceMembersAsync.value ?? [];
+    final groups = userGroupsAsync.value ?? [];
+
+    final theme = Theme.of(context);
+    final textStyle = style ?? theme.textTheme.bodyMedium;
+
+    final regex = RegExp(r'@([\w\-]+)');
+    final matches = regex.allMatches(content);
+
+    if (matches.isEmpty) {
+      return Text(content, style: style);
+    }
+
+    final List<InlineSpan> spans = [];
+    int lastIndex = 0;
+
+    for (final match in matches) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: content.substring(lastIndex, match.start),
+          style: textStyle,
+        ));
+      }
+
+      final handle = match.group(1)?.toLowerCase() ?? '';
+      final mentionText = match.group(0) ?? '';
+
+      AltrUser? user;
+      for (final u in members) {
+        if (u.userName.toLowerCase() == handle) {
+          user = u;
+          break;
+        }
+      }
+
+      Map<String, dynamic>? group;
+      for (final g in groups) {
+        if ((g['handle'] ?? '').toString().toLowerCase() == handle) {
+          group = g;
+          break;
+        }
+      }
+
+      final targetUser = user;
+      final targetGroup = group;
+
+      if (targetUser != null) {
+        spans.add(
+          TextSpan(
+            text: mentionText,
+            style: textStyle?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                ref.read(profileTargetUserIdProvider.notifier).state = targetUser.userId;
+                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+              },
+          ),
+        );
+      } else if (targetGroup != null) {
+        spans.add(
+          TextSpan(
+            text: mentionText,
+            style: textStyle?.copyWith(
+              color: theme.colorScheme.secondary,
+              fontWeight: FontWeight.bold,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                ref.read(usersAndGroupsViewHistoryProvider.notifier).state = ['group:${targetGroup['id']}'];
+                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.usersAndGroups;
+              },
+          ),
+        );
+      } else {
+        spans.add(TextSpan(
+          text: mentionText,
+          style: textStyle,
+        ));
+      }
+
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < content.length) {
+      spans.add(TextSpan(
+        text: content.substring(lastIndex),
+        style: textStyle,
+      ));
+    }
+
+    return RichText(
+      text: TextSpan(children: spans),
+    );
   }
 }

@@ -1,6 +1,8 @@
 // Packages
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+
+// Providers
 import 'package:chat/providers/appearance_notifier.dart';
 
 class ThemePreviewWindow extends ConsumerWidget {
