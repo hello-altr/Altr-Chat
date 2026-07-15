@@ -25,8 +25,11 @@ import 'package:chat/pages/onboarding_page.dart';
 import 'package:chat/pages/welcome_page.dart';
 import 'package:chat/pages/splash_page.dart';
 
-// Theme & Utils
+// Theme & Utils 
 import 'package:chat/theme/app_theme.dart';
+
+// Models
+import 'package:chat/models/user_model.dart';
 
 // Firebase
 import 'firebase_options.dart';
@@ -36,7 +39,7 @@ void main() async {
 
   // Safely configures desktop windows on macOS without breaking the Web
   if (!kIsWeb) {
-    configureDesktopWindow();
+     configureDesktopWindow();
   }
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -70,11 +73,52 @@ final splashDelayProvider = FutureProvider<void>((ref) async {
   await Future.delayed(const Duration(seconds: 2));
 });
 
-class AltrChat extends ConsumerWidget {
+class AltrChat extends ConsumerStatefulWidget {
   const AltrChat({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AltrChat> createState() => _AltrChatState();
+}
+
+class _AltrChatState extends ConsumerState<AltrChat> {
+  String? _cachedActiveWorkspaceId;
+
+  void _checkAndRegisterDevice(AltrUser altrUser, String deviceId) async {
+    final activeWorkspaceId = altrUser.activeWorkspaceId;
+    if (activeWorkspaceId.isNotEmpty) {
+      _cachedActiveWorkspaceId = activeWorkspaceId;
+      return;
+    }
+
+    if (altrUser.joinedWorkspaces.isNotEmpty) {
+      final fallbackWorkspace = altrUser.joinedWorkspaces.first;
+      // Value guard check rule: only write if different from cached value
+      if (_cachedActiveWorkspaceId != fallbackWorkspace) {
+        _cachedActiveWorkspaceId = fallbackWorkspace;
+        try {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(altrUser.userId)
+              .collection('devices')
+              .doc(deviceId)
+              .set({
+            'device_id': deviceId,
+            'active_workspace_id': fallbackWorkspace,
+            'last_active': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          
+          if (mounted) {
+            ref.invalidate(userProfileProvider);
+          }
+        } catch (e) {
+          log('Failed to register device fallback workspace: $e', name: 'DeviceRegistration');
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final appearanceState = ref.watch(appearanceProvider);
     final currentThemeMode = appearanceState.themeMode;
     final accentSeedColor = appearanceState.accentSeedColor;
@@ -82,11 +126,19 @@ class AltrChat extends ConsumerWidget {
     final userProfile = ref.watch(userProfileProvider);
     final splashDelay = ref.watch(splashDelayProvider);
 
+    // Listen to user profile changes and perform device registration outside of the build path
+    ref.listen<AsyncValue<AltrUser?>>(userProfileProvider, (previous, next) {
+      final altrUser = next.value;
+      final deviceId = deviceIdAsync.value;
+      if (altrUser != null && deviceId != null && deviceId.isNotEmpty) {
+        _checkAndRegisterDevice(altrUser, deviceId);
+      }
+    });
+
     final Widget homeScreen;
     if (splashDelay.isLoading || deviceIdAsync.isLoading) {
       homeScreen = const SplashLoadingView();
     } else {
-      final deviceId = deviceIdAsync.value ?? '';
       homeScreen = userProfile.when(
         data: (altrUser) {
           if (altrUser == null) {
@@ -100,20 +152,6 @@ class AltrChat extends ConsumerWidget {
             return const WorkspaceOnboardingPage();
           }
 
-          final activeWorkspaceId = altrUser.activeWorkspaceId;
-          if (activeWorkspaceId.isEmpty) {
-            final fallbackWorkspace = altrUser.joinedWorkspaces.first;
-            FirebaseFirestore.instance
-                .collection('users')
-                .doc(altrUser.userId)
-                .collection('devices')
-                .doc(deviceId)
-                .set({
-                  'device_id': deviceId,
-                  'active_workspace_id': fallbackWorkspace,
-                  'last_active': FieldValue.serverTimestamp(),
-                }, SetOptions(merge: true));
-          }
           return const LayoutShell();
         },
         loading: () => const SplashLoadingView(),

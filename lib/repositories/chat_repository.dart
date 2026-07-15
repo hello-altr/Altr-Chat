@@ -1,15 +1,21 @@
 // Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:developer' as dev;
 import 'dart:async';
 
 // Models
+import 'package:chat/models/message_model.dart';
 import 'package:chat/models/channel_model.dart';
 import 'package:chat/models/user_model.dart';
 import 'package:chat/models/dm_model.dart';
 
 // Providers
 import 'package:chat/providers/auth_provider.dart';
+
+// Repositories
+import 'package:chat/repositories/user_cache_repository.dart';
+import 'package:chat/utils/provider_extension.dart';
 
 class WorkspaceNavigationState {
   final List<ChannelModel> channels;
@@ -37,30 +43,47 @@ class ChatRepository {
     required String type,
     required String currentUserId,
   }) async {
+    dev.log(
+      'createChannel called with workspaceId: "$workspaceId", channelName: "$channelName", type: "$type", currentUserId: "$currentUserId"',
+      name: 'ChatRepository',
+    );
     final cleanName = channelName.replaceAll(' ', '').toLowerCase();
     final String nameInput = cleanName.startsWith('#') ? cleanName : '#$cleanName';
     final String displayName = nameInput.replaceAll('#', '');
 
     final docRef = _firestore
-        .collection('workspaces')
+        .collection('chats')
         .doc(workspaceId)
         .collection('channels')
         .doc();
 
-    await docRef.set({
-      'channel_name': nameInput,
-      'name': displayName,
-      'type': type,
-      'is_private': type == 'private',
-      'created_by': currentUserId,
-      'created_at': FieldValue.serverTimestamp(),
-      'is_archived': false,
-      'last_message': 'Workspace channel created.',
-      'last_message_time': FieldValue.serverTimestamp(),
-      'unread_count': 0,
-      'warning_count': 0,
-      'members': [currentUserId],
-    });
+    dev.log('Creating channel at path: "${docRef.path}"', name: 'ChatRepository');
+
+    try {
+      await docRef.set({
+        'channel_name': nameInput,
+        'name': displayName,
+        'type': type,
+        'is_private': type == 'private',
+        'created_by': currentUserId,
+        'created_at': FieldValue.serverTimestamp(),
+        'is_archived': false,
+        'last_message': 'Workspace channel created.',
+        'last_message_time': FieldValue.serverTimestamp(),
+        'unread_count': 0,
+        'warning_count': 0,
+        'members': [currentUserId],
+      });
+      dev.log('Successfully created channel document in Firestore.', name: 'ChatRepository');
+    } catch (e, stack) {
+      dev.log(
+        'Failed to set channel document in Firestore: $e',
+        name: 'ChatRepository',
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
   }
 
   Future<String> initializeDM({
@@ -73,7 +96,7 @@ class ChatRepository {
         : '${targetUserId}_$currentUserId';
 
     final dmRef = _firestore
-        .collection('workspaces')
+        .collection('chats')
         .doc(workspaceId)
         .collection('dms')
         .doc(dmId);
@@ -101,7 +124,7 @@ class ChatRepository {
 
   Stream<List<ChannelModel>> watchChannels(String workspaceId, String userId) {
     return _firestore
-        .collection('workspaces')
+        .collection('chats')
         .doc(workspaceId)
         .collection('channels')
         .snapshots()
@@ -118,7 +141,7 @@ class ChatRepository {
 
   Stream<List<DmModel>> watchDms(String workspaceId, String userId) {
     return _firestore
-        .collection('workspaces')
+        .collection('chats')
         .doc(workspaceId)
         .collection('dms')
         .where('participants', arrayContains: userId)
@@ -188,7 +211,7 @@ class ChatRepository {
     required bool isChannel,
   }) async {
     final docRef = _firestore
-        .collection('workspaces')
+        .collection('chats')
         .doc(workspaceId)
         .collection(isChannel ? 'channels' : 'dms')
         .doc(id);
@@ -213,10 +236,20 @@ class ChatRepository {
     required bool isChannel,
   }) async {
     final docRef = _firestore
-        .collection('workspaces')
+        .collection('chats')
         .doc(workspaceId)
         .collection(isChannel ? 'channels' : 'dms')
         .doc(id);
+
+    // Delete all messages in the subcollection first to avoid residual data in Firestore
+    final messagesSnapshot = await docRef.collection('messages').get();
+    if (messagesSnapshot.docs.isNotEmpty) {
+      final batch = _firestore.batch();
+      for (final doc in messagesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
 
     await docRef.delete();
   }
@@ -225,19 +258,29 @@ class ChatRepository {
 // Providers
 final chatRepositoryProvider = Provider<ChatRepository>((ref) => ChatRepository());
 
-final channelsStreamProvider = StreamProvider.family<List<ChannelModel>, String>((ref, workspaceId) {
+final workspaceChannelsStreamProvider = StreamProvider.autoDispose.family<List<ChannelModel>, String>((ref, workspaceId) {
+  // Prevent duplicate baseline fetches during temporary workspace configuration adjustments
+  ref.keepAliveFor(const Duration(minutes: 5));
+  if (workspaceId.isEmpty) return Stream.value([]);
   final repo = ref.watch(chatRepositoryProvider);
   final authUser = ref.watch(authStateProvider).value;
   final userId = authUser?.uid ?? '';
   return repo.watchChannels(workspaceId, userId);
 });
 
-final dmsStreamProvider = StreamProvider.family<List<DmModel>, String>((ref, workspaceId) {
+final channelsStreamProvider = workspaceChannelsStreamProvider;
+
+final workspaceDmsStreamProvider = StreamProvider.autoDispose.family<List<DmModel>, String>((ref, workspaceId) {
+  // Prevent duplicate baseline fetches during temporary workspace configuration adjustments
+  ref.keepAliveFor(const Duration(minutes: 5));
+  if (workspaceId.isEmpty) return Stream.value([]);
   final repo = ref.watch(chatRepositoryProvider);
   final authUser = ref.watch(authStateProvider).value;
   final userId = authUser?.uid ?? '';
   return repo.watchDms(workspaceId, userId);
 });
+
+final dmsStreamProvider = workspaceDmsStreamProvider;
 
 final workspaceNavigationStreamProvider = StreamProvider<WorkspaceNavigationState>((ref) {
   final workspaceId = ref.watch(currentWorkspaceIdProvider);
@@ -252,33 +295,11 @@ final workspaceNavigationStreamProvider = StreamProvider<WorkspaceNavigationStat
 });
 
 // User Profile Resolver for DMs display name resolution
-final userProfileByIdProvider = FutureProvider.family<AltrUser?, String>((ref, userId) async {
-  final repo = ref.watch(chatRepositoryProvider);
-  if (repo.hasCachedUser(userId)) {
-    return repo.getCachedUser(userId);
-  }
-
-  // Try fetching from local cache first
-  try {
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get(const GetOptions(source: Source.cache));
-    if (doc.exists && doc.data() != null) {
-      final user = AltrUser.fromMap(doc.data()!, activeWorkspaceId: '');
-      repo.cacheUser(userId, user);
-      return user;
-    }
-  } catch (_) {}
-
-  // Fallback to server
-  final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-  if (doc.exists && doc.data() != null) {
-    final user = AltrUser.fromMap(doc.data()!, activeWorkspaceId: '');
-    repo.cacheUser(userId, user);
-    return user;
-  }
-  return null;
+final userProfileByIdProvider = FutureProvider.autoDispose.family<AltrUser?, String>((ref, userId) async {
+  // Prevent duplicate baseline fetches during temporary workspace configuration adjustments
+  ref.keepAliveFor(const Duration(minutes: 5));
+  ref.watch(userCacheRepositoryProvider);
+  return ref.watch(userCacheRepositoryProvider.notifier).getUser(userId);
 });
 
 // Stream Provider for Workspace Members
@@ -320,7 +341,7 @@ final activeChannelProvider = StreamProvider.family<ChannelModel?, String>((ref,
   if (workspaceId == null) return Stream.value(null);
   
   return FirebaseFirestore.instance
-      .collection('workspaces')
+      .collection('chats')
       .doc(workspaceId)
       .collection('channels')
       .doc(channelId)
@@ -333,12 +354,48 @@ final activeDmProvider = StreamProvider.family<DmModel?, String>((ref, dmId) {
   if (workspaceId == null) return Stream.value(null);
   
   return FirebaseFirestore.instance
-      .collection('workspaces')
+      .collection('chats')
       .doc(workspaceId)
       .collection('dms')
       .doc(dmId)
       .snapshots()
       .map((doc) => doc.exists ? DmModel.fromFirestore(doc) : null);
+});
+
+final channelMessagesStreamProvider = StreamProvider.autoDispose.family<List<MessageModel>, String>((ref, channelId) {
+  ref.keepAliveFor(const Duration(minutes: 5));
+  final workspaceId = ref.watch(currentWorkspaceIdProvider);
+  if (workspaceId == null) return Stream.value([]);
+
+  return FirebaseFirestore.instance
+      .collection('chats')
+      .doc(workspaceId)
+      .collection('channels')
+      .doc(channelId)
+      .collection('messages')
+      .orderBy('time', descending: false)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) => MessageModel.fromFirestore(doc)).toList();
+  });
+});
+
+final dmMessagesStreamProvider = StreamProvider.autoDispose.family<List<MessageModel>, String>((ref, dmId) {
+  ref.keepAliveFor(const Duration(minutes: 5));
+  final workspaceId = ref.watch(currentWorkspaceIdProvider);
+  if (workspaceId == null) return Stream.value([]);
+
+  return FirebaseFirestore.instance
+      .collection('chats')
+      .doc(workspaceId)
+      .collection('dms')
+      .doc(dmId)
+      .collection('messages')
+      .orderBy('time', descending: false)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) => MessageModel.fromFirestore(doc)).toList();
+  });
 });
 
 

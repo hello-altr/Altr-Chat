@@ -1,18 +1,25 @@
-import 'package:flutter/material.dart';
+// Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hugeicons_pro/hugeicons.dart';
+import 'package:material_ui/material_ui.dart';
 
 // Providers & Layout
-import 'package:chat/providers/layout_provider.dart';
-import 'package:chat/providers/settings_provider.dart';
-import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/chat_session_provider.dart';
+import 'package:chat/providers/settings_provider.dart';
+import 'package:chat/providers/layout_provider.dart';
+import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
+
+// Repositories
 import 'package:chat/repositories/chat_repository.dart';
+
+// Widgets
 import 'package:chat/widgets/action_button.dart';
 import 'package:chat/widgets/details_row.dart';
 import 'package:chat/widgets/section_header.dart';
+
+// Enums & Values
 import 'package:chat/enums/layout_mode.dart';
 
 class UsersAndGroupsPage extends ConsumerStatefulWidget {
@@ -82,7 +89,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
 
     try {
       final dmRef = FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(activeWorkspaceId)
           .collection('dms')
           .doc(dmId);

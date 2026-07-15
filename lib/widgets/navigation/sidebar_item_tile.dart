@@ -4,10 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:material_ui/material_ui.dart';
 
 // Providers
+import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
-import 'package:chat/providers/chat_session_provider.dart';
 
 // Repositories
 import 'package:chat/repositories/chat_repository.dart';
@@ -398,7 +398,7 @@ final unreadCountStreamProvider = StreamProvider.family<int, UnreadCountArgs>((r
       final lastReadVal = lastReadTimestamps[args.chatId];
 
       var query = FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
           .collection(args.isChannel ? 'channels' : 'dms')
           .doc(args.chatId)

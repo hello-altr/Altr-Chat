@@ -26,26 +26,7 @@ import 'package:chat/models/user_model.dart';
 import 'package:chat/enums/layout_mode.dart';
 
 
-final messagesStreamProvider = StreamProvider.family<List<MessageModel>, String>((ref, chatId) {
-  final workspaceId = ref.watch(currentWorkspaceIdProvider);
-  if (workspaceId == null) return Stream.value([]);
-
-  final chatSession = ref.watch(activeChatSessionProvider);
-  final isChannel = chatSession.type == ChatSessionType.channel;
-  final collectionPath = isChannel ? 'channels' : 'dms';
-
-  return FirebaseFirestore.instance
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection(collectionPath)
-      .doc(chatId)
-      .collection('messages')
-      .orderBy('timestamp', descending: true)
-      .snapshots()
-      .map((snapshot) {
-        return snapshot.docs.map((doc) => MessageModel.fromFirestore(doc)).toList();
-      });
-});
+// messagesStreamProvider has been replaced by channelMessagesStreamProvider and dmMessagesStreamProvider in chat_repository.dart
 
 final _workspaceUserGroupsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, workspaceId) {
   return FirebaseFirestore.instance
@@ -188,19 +169,23 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 
     final chatSession = ref.read(activeChatSessionProvider);
     final isChannel = chatSession.type == ChatSessionType.channel;
-    final collectionPath = isChannel ? 'channels' : 'dms';
     final activeId = widget.chatId ?? '';
 
     final docRef = FirebaseFirestore.instance
-        .collection('workspaces')
+        .collection('chats')
         .doc(workspaceId)
-        .collection(collectionPath)
+        .collection(isChannel ? 'channels' : 'dms')
         .doc(activeId);
 
     _controller.clear();
 
     try {
       await docRef.collection('messages').add({
+        'message': content,
+        'senderId': authUser.uid,
+        'time': FieldValue.serverTimestamp(),
+        'type': 'message',
+        'quoted_reply_id': _quotedMessage?.id,
         'sender_id': authUser.uid,
         'sender_name': senderName,
         'sender_photo_url': senderPhotoUrl,
@@ -307,19 +292,19 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 
     final chatSession = ref.read(activeChatSessionProvider);
     final isChannel = chatSession.type == ChatSessionType.channel;
-    final collectionPath = isChannel ? 'channels' : 'dms';
     final activeId = widget.chatId ?? '';
 
     try {
       await FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
-          .collection(collectionPath)
+          .collection(isChannel ? 'channels' : 'dms')
           .doc(activeId)
           .collection('messages')
           .doc(messageId)
           .update({
         'content': newContent,
+        'message': newContent,
         'is_edited': true,
       });
     } catch (e) {
@@ -340,14 +325,13 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 
     final chatSession = ref.read(activeChatSessionProvider);
     final isChannel = chatSession.type == ChatSessionType.channel;
-    final collectionPath = isChannel ? 'channels' : 'dms';
     final activeId = widget.chatId ?? '';
 
     try {
       await FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
-          .collection(collectionPath)
+          .collection(isChannel ? 'channels' : 'dms')
           .doc(activeId)
           .collection('messages')
           .doc(messageId)
@@ -657,48 +641,10 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
       titleText = profileAsync.value?.displayName ?? 'Loading...';
     }
 
-    final messagesAsync = ref.watch(messagesStreamProvider(activeId));
-
-    // Auto mark as read when new messages arrive while the chat is open
+    final messagesAsync = isChannel
+        ? ref.watch(channelMessagesStreamProvider(activeId))
+        : ref.watch(dmMessagesStreamProvider(activeId));
     final workspaceId = ref.watch(currentWorkspaceIdProvider);
-    if (workspaceId != null) {
-      final metaAsync = ref.watch(workspaceMetaProvider(workspaceId));
-      if (messagesAsync.hasValue && messagesAsync.value!.isNotEmpty && metaAsync.hasValue) {
-        final messages = messagesAsync.value!;
-        final latestMessageTime = messages.first.timestamp;
-
-        final metaData = metaAsync.value;
-        final lastReadTimestamps = metaData?['last_read_timestamps'] as Map<String, dynamic>? ?? {};
-        final lastReadVal = lastReadTimestamps[activeId];
-
-        bool needsUpdate = false;
-        if (latestMessageTime != null) {
-          if (lastReadVal == null) {
-            needsUpdate = true;
-          } else if (lastReadVal is Timestamp) {
-            needsUpdate = latestMessageTime.isAfter(lastReadVal.toDate());
-          }
-        }
-
-        if (needsUpdate) {
-          final authUser = ref.read(authStateProvider).value;
-          if (authUser != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(authUser.uid)
-                  .collection('workspace_meta')
-                  .doc(workspaceId)
-                  .set({
-                    'last_read_timestamps': {
-                      activeId: FieldValue.serverTimestamp(),
-                    }
-                  }, SetOptions(merge: true));
-            });
-          }
-        }
-      }
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -800,7 +746,8 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
         children: [
           Expanded(
             child: messagesAsync.when(
-              data: (messages) {
+              data: (ascendingMessages) {
+                final messages = ascendingMessages.reversed.toList();
                 if (messages.isEmpty) {
                   return Center(
                     child: Column(

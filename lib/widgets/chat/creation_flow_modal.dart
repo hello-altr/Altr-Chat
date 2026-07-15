@@ -1,12 +1,15 @@
 // Packages
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:hugeicons_pro/hugeicons.dart';
+import 'dart:developer' as dev;
 
 // Providers
-import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/settings_provider.dart';
+import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Repositories
@@ -247,28 +250,62 @@ class _ChannelCreationSheetState extends ConsumerState<ChannelCreationSheet> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    dev.log('Channel form submit triggered.', name: 'CreationFlowModal');
+    if (!_formKey.currentState!.validate()) {
+      dev.log('Channel form validation failed.', name: 'CreationFlowModal');
+      return;
+    }
     
     setState(() {
       _isLoading = true;
     });
 
     final workspaceId = ref.read(currentWorkspaceIdProvider) ?? '';
-    final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? ref.read(authStateProvider).value?.uid ?? '';
     final channelName = _nameController.text;
+
+    dev.log(
+      'Attempting to submit channel creation. workspaceId: "$workspaceId", currentUserId: "$currentUserId", channelName: "$channelName"',
+      name: 'CreationFlowModal',
+    );
+
+    if (workspaceId.isEmpty || currentUserId.isEmpty) {
+      dev.log(
+        'Validation failed: workspaceId or currentUserId is empty. workspaceId: "$workspaceId", currentUserId: "$currentUserId"',
+        name: 'CreationFlowModal',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to create channel: Workspace ID or User ID is missing.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
 
     try {
       final repo = ref.read(chatRepositoryProvider);
+      dev.log('Invoking repo.createChannel...', name: 'CreationFlowModal');
       await repo.createChannel(
         workspaceId: workspaceId,
         channelName: channelName,
         type: _isPrivate ? 'private' : 'public',
         currentUserId: currentUserId,
       );
+      dev.log('repo.createChannel call completed successfully.', name: 'CreationFlowModal');
 
       // Close modal on completion
       widget.onClose();
-    } catch (e) {
+    } catch (e, stack) {
+      dev.log(
+        'Exception caught in _submit channel creation: $e',
+        name: 'CreationFlowModal',
+        error: e,
+        stackTrace: stack,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to create channel: $e'),
@@ -409,7 +446,20 @@ class _DMMemberSelectorSheetState extends ConsumerState<DMMemberSelectorSheet> {
     });
 
     final workspaceId = ref.read(currentWorkspaceIdProvider) ?? '';
-    final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? ref.read(authStateProvider).value?.uid ?? '';
+
+    if (workspaceId.isEmpty || currentUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to initialize DM: Workspace ID or User ID is missing.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      setState(() {
+        _loadingUserId = null;
+      });
+      return;
+    }
 
     try {
       final repo = ref.read(chatRepositoryProvider);
@@ -426,6 +476,20 @@ class _DMMemberSelectorSheetState extends ConsumerState<DMMemberSelectorSheet> {
         type: ChatSessionType.dm,
       );
       ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+
+      // Explicitly clear unread status on the newly opened DM room
+      if (currentUserId.isNotEmpty && workspaceId.isNotEmpty) {
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .collection('workspace_meta')
+            .doc(workspaceId)
+            .set({
+          'last_read_timestamps': {
+            dmId: FieldValue.serverTimestamp(),
+          }
+        }, SetOptions(merge: true));
+      }
 
       // Close the modal
       widget.onClose();

@@ -4,13 +4,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:material_ui/material_ui.dart';
 
-// Providers & Models
-import 'package:chat/providers/auth_provider.dart';
+// Providers
 import 'package:chat/providers/chat_session_provider.dart';
 import 'package:chat/providers/settings_provider.dart';
 import 'package:chat/providers/layout_provider.dart';
+import 'package:chat/providers/auth_provider.dart';
+
+// Models
 import 'package:chat/models/channel_model.dart';
 import 'package:chat/models/user_model.dart';
+
+// Repositories
 import 'package:chat/repositories/chat_repository.dart';
 
 // Widgets
@@ -58,7 +62,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
 
     try {
       await FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
           .collection('channels')
           .doc(channelId)
@@ -94,7 +98,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
   Future<void> _promoteMemberToManager(String workspaceId, String channelId, String userId, String displayName) async {
     try {
       await FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
           .collection('channels')
           .doc(channelId)
@@ -119,7 +123,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
   Future<void> _demoteManagerToMember(String workspaceId, String channelId, String userId, String displayName) async {
     try {
       await FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
           .collection('channels')
           .doc(channelId)
@@ -144,7 +148,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
   Future<void> _removeMemberFromChannel(String workspaceId, String channelId, String userId, String displayName) async {
     try {
       await FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
           .collection('channels')
           .doc(channelId)
@@ -170,7 +174,7 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
   Future<void> _archiveChannel(String workspaceId, String channelId) async {
     try {
       await FirebaseFirestore.instance
-          .collection('workspaces')
+          .collection('chats')
           .doc(workspaceId)
           .collection('channels')
           .doc(channelId)
@@ -1023,7 +1027,7 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
                         });
                         try {
                           await FirebaseFirestore.instance
-                              .collection('workspaces')
+                              .collection('chats')
                               .doc(widget.workspaceId)
                               .collection('channels')
                               .doc(widget.channel.id)

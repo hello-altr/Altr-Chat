@@ -1,3 +1,4 @@
+// Packages
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
@@ -25,13 +26,13 @@ class MessageModel {
 
   factory MessageModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    final timestamp = data['timestamp'] as Timestamp?;
+    final timestamp = (data['timestamp'] ?? data['time']) as Timestamp?;
     return MessageModel(
       id: doc.id,
-      senderId: data['sender_id'] ?? '',
+      senderId: data['sender_id'] ?? data['senderId'] ?? '',
       senderName: data['sender_name'] ?? '',
       senderPhotoUrl: data['sender_photo_url'] ?? '',
-      content: data['content'] ?? '',
+      content: data['content'] ?? data['message'] ?? '',
       timestamp: timestamp?.toDate(),
       quotedMessageContent: data['quoted_message_content'],
       quotedMessageSenderName: data['quoted_message_sender_name'],

@@ -1,3 +1,4 @@
+// Packages
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DmModel {
@@ -5,6 +6,7 @@ class DmModel {
   final List<String> participants;
   final String userName;
   final String lastMessage;
+  final String lastMessagePreview;
   final String time;
   final int unreadCount;
   final DateTime? lastMessageTime;
@@ -14,6 +16,7 @@ class DmModel {
     required this.participants,
     required this.userName,
     required this.lastMessage,
+    required this.lastMessagePreview,
     required this.time,
     required this.unreadCount,
     this.lastMessageTime,
@@ -27,6 +30,7 @@ class DmModel {
       participants: (data['participants'] as List?)?.map((e) => e.toString()).toList().cast<String>() ?? <String>[],
       userName: '', // Will resolve using participant lookup/cache in UI or provider
       lastMessage: data['last_message'] ?? '',
+      lastMessagePreview: data['last_message_preview'] ?? '',
       time: timestamp != null ? _formatTimestamp(timestamp) : '',
       unreadCount: data['unread_count'] ?? 0,
       lastMessageTime: timestamp?.toDate(),
@@ -38,6 +42,7 @@ class DmModel {
     List<String>? participants,
     String? userName,
     String? lastMessage,
+    String? lastMessagePreview,
     String? time,
     int? unreadCount,
     DateTime? lastMessageTime,
@@ -47,6 +52,7 @@ class DmModel {
       participants: participants ?? this.participants,
       userName: userName ?? this.userName,
       lastMessage: lastMessage ?? this.lastMessage,
+      lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
       time: time ?? this.time,
       unreadCount: unreadCount ?? this.unreadCount,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
