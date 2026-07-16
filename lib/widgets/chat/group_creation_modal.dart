@@ -573,76 +573,96 @@ class _GroupCreationModalState extends ConsumerState<GroupCreationModal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Review the details of your new user group.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: theme.colorScheme.surfaceContainerHigh,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+          Expanded(
+            child: SingleChildScrollView(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ListTile(
-                    title: const Text('Group Name', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(_nameController.text),
-                    leading: const Icon(HugeIconsStroke.userGroup),
+                  Text(
+                    'Review the details of your new user group.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  const Divider(),
-                  ListTile(
-                    title: const Text('Group Handle', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('@${_handleController.text}'),
-                    leading: const Icon(HugeIconsStroke.hashtag),
+                  const SizedBox(height: 24),
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    color: theme.colorScheme.surfaceContainerHigh,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: const Text('Group Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(_nameController.text),
+                            leading: const Icon(HugeIconsStroke.userGroup),
+                          ),
+                          const Divider(),
+                          ListTile(
+                            title: const Text('Group Handle', style: TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('@${_handleController.text}'),
+                            leading: const Icon(HugeIconsStroke.hashtag),
+                          ),
+                          const Divider(),
+                          ListTile(
+                            title: const Text('Members Count', style: TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('${_selectedUserIds.length} members added'),
+                            leading: const Icon(HugeIconsStroke.user),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const Divider(),
-                  ListTile(
-                    title: const Text('Members Count', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${_selectedUserIds.length} members added'),
-                    leading: const Icon(HugeIconsStroke.user),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Members:',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  membersAsync.when(
+                    data: (users) {
+                      final selectedUsers = users.where((u) => _selectedUserIds.contains(u.userId)).toList();
+                      if (selectedUsers.isEmpty) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24.0),
+                            child: Text('No members added.'),
+                          ),
+                        );
+                      }
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: selectedUsers.length,
+                        itemBuilder: (context, index) {
+                          final user = selectedUsers[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: user.photoUrl.isNotEmpty
+                                ? CircleAvatar(backgroundImage: NetworkImage(user.photoUrl))
+                                : CircleAvatar(
+                                    backgroundColor: _getInitialsBgColor(user.displayName),
+                                    child: Text(_getInitials(user.displayName), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
+                            title: Text(user.displayName),
+                            subtitle: Text('@${user.userName}'),
+                          );
+                        },
+                      );
+                    },
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    error: (err, _) => Text('Error: $err'),
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Members:',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: membersAsync.when(
-              data: (users) {
-                final selectedUsers = users.where((u) => _selectedUserIds.contains(u.userId)).toList();
-                if (selectedUsers.isEmpty) {
-                  return const Center(child: Text('No members added.'));
-                }
-                return ListView.builder(
-                  itemCount: selectedUsers.length,
-                  itemBuilder: (context, index) {
-                    final user = selectedUsers[index];
-                    return ListTile(
-                      leading: user.photoUrl.isNotEmpty
-                          ? CircleAvatar(backgroundImage: NetworkImage(user.photoUrl))
-                          : CircleAvatar(
-                              backgroundColor: _getInitialsBgColor(user.displayName),
-                              child: Text(_getInitials(user.displayName), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ),
-                      title: Text(user.displayName),
-                      subtitle: Text('@${user.userName}'),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('Error: $err'),
-            ),
-          ),
-          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             height: 50,

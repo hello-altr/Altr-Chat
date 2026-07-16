@@ -35,7 +35,7 @@ class DesktopShell extends ConsumerStatefulWidget {
 
 class _DesktopShellState extends ConsumerState<DesktopShell> {
   double _sidebarWidth = 400.0;
-  double _profileSidebarWidth = 350.0;
+  double _profileSidebarWidth = 400.0;
   late PageController _sidebarPageController;
 
   @override
@@ -310,10 +310,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
           ),
 
           // Resize drag handle overlay (Right Settings Sidebar)
-          if ((selectedIndex == 0 || selectedIndex == 1) &&
+          if ((selectedIndex == 0 || selectedIndex == 1 || (selectedIndex == 2 && currentSettingsTab == SettingsPanelType.usersAndGroups)) &&
               (activeSettingsPanel == SettingsPanelType.profile ||
                activeSettingsPanel == SettingsPanelType.notifications ||
-               activeSettingsPanel == SettingsPanelType.channelInfo))
+               activeSettingsPanel == SettingsPanelType.channelInfo ||
+               activeSettingsPanel == SettingsPanelType.userGroupInfo))
             Positioned(
               right: _profileSidebarWidth - 5,
               top: 0,
@@ -322,7 +323,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 behavior: HitTestBehavior.translucent,
                 onHorizontalDragUpdate: (details) {
                   setState(() {
-                    _profileSidebarWidth = (_profileSidebarWidth - details.delta.dx).clamp(300.0, 500.0);
+                    _profileSidebarWidth = (_profileSidebarWidth - details.delta.dx).clamp(320.0, 400.0);
                   });
                 },
                 child: MouseRegion(
