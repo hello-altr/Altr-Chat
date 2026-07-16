@@ -100,7 +100,8 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                 },
               ),
           ],
-          backgroundColor: Colors.transparent,
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          scrolledUnderElevation: 0,
           elevation: 0,
         ),
         body: SafeArea(

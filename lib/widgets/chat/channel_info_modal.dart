@@ -317,6 +317,9 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                 },
               ),
           ],
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          scrolledUnderElevation: 0,
+          elevation: 0,
         ),
         body: const Center(
           child: CircularProgressIndicator(),
@@ -372,7 +375,8 @@ class _ChannelInfoPanelState extends ConsumerState<ChannelInfoPanel> {
                 },
               ),
           ],
-          backgroundColor: Colors.transparent,
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          scrolledUnderElevation: 0,
           elevation: 0,
         ),
         body: SafeArea(
@@ -1085,6 +1089,9 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
             icon: const Icon(Icons.arrow_back_ios_new),
             onPressed: () => Navigator.of(context).pop(),
           ),
+          backgroundColor: theme.colorScheme.surfaceContainer,
+          scrolledUnderElevation: 0,
+          elevation: 0,
         ),
         body: SafeArea(
           child: Padding(
