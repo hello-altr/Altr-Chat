@@ -75,6 +75,8 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                     onTap: () {
                       ref.read(activeSettingsPanelProvider.notifier).state =
                           SettingsPanelType.profile;
+                      ref.read(currentSettingsTabProvider.notifier).state =
+                          SettingsPanelType.profile;
                       if (isDesktop) {
                         ref.read(activeChatSessionProvider.notifier).state =
                             const ActiveChatSession();
@@ -269,6 +271,8 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                           onTap: () {
                             ref.read(activeSettingsPanelProvider.notifier).state =
                                 SettingsPanelType.workspaceInfo;
+                            ref.read(currentSettingsTabProvider.notifier).state =
+                                SettingsPanelType.workspaceInfo;
                             if (isDesktop) {
                               ref.read(activeChatSessionProvider.notifier).state =
                                   const ActiveChatSession();
@@ -288,6 +292,8 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                           ),
                           onTap: () {
                             ref.read(activeSettingsPanelProvider.notifier).state =
+                                SettingsPanelType.usersAndGroups;
+                            ref.read(currentSettingsTabProvider.notifier).state =
                                 SettingsPanelType.usersAndGroups;
                             if (isDesktop) {
                               ref.read(activeChatSessionProvider.notifier).state =
@@ -339,6 +345,10 @@ class _SettingsIndexHubState extends ConsumerState<SettingsIndexHub> {
                           onTap: () {
                             ref
                                     .read(activeSettingsPanelProvider.notifier)
+                                    .state =
+                                SettingsPanelType.appearance;
+                            ref
+                                    .read(currentSettingsTabProvider.notifier)
                                     .state =
                                 SettingsPanelType.appearance;
                             if (isDesktop) {

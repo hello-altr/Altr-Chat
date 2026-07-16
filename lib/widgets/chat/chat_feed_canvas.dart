@@ -22,6 +22,7 @@ import 'package:chat/repositories/chat_repository.dart';
 // Models
 import 'package:chat/models/message_model.dart';
 import 'package:chat/models/user_model.dart';
+import 'package:chat/models/channel_model.dart';
 
 // Enums
 import 'package:chat/enums/layout_mode.dart';
@@ -29,7 +30,7 @@ import 'package:chat/enums/layout_mode.dart';
 
 // messagesStreamProvider has been replaced by channelMessagesStreamProvider and dmMessagesStreamProvider in chat_repository.dart
 
-final _workspaceUserGroupsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, workspaceId) {
+final workspaceUserGroupsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, workspaceId) {
   return FirebaseFirestore.instance
       .collection('workspaces')
       .doc(workspaceId)
@@ -455,7 +456,7 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
 
   Widget _buildMentionPopup(BuildContext context, ThemeData theme, String workspaceId) {
     final workspaceMembersAsync = ref.watch(workspaceMembersStreamProvider(workspaceId));
-    final userGroupsAsync = ref.watch(_workspaceUserGroupsProvider(workspaceId));
+    final userGroupsAsync = ref.watch(workspaceUserGroupsProvider(workspaceId));
 
     if (!workspaceMembersAsync.hasValue || !userGroupsAsync.hasValue) {
       return const SizedBox.shrink();
@@ -509,19 +510,27 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
       }
     }
 
-    // 2. Add matching workspace user groups
-    for (final group in groups) {
-      final name = group['name'] ?? '';
-      final handle = group['handle'] ?? '';
-      if (query.isEmpty ||
-          name.toLowerCase().contains(query) ||
-          handle.toLowerCase().contains(query)) {
-        items.add({
-          'id': group['id'],
-          'name': name,
-          'handle': handle,
-          'type': 'group',
-        });
+    // 2. Add matching workspace user groups that have been added to the channel
+    if (chatSession.type == ChatSessionType.channel) {
+      final channel = ref.watch(activeChannelProvider(activeId)).value;
+      if (channel != null) {
+        for (final group in groups) {
+          final groupId = group['id'] ?? '';
+          if (channel.userGroups.contains(groupId)) {
+            final name = group['name'] ?? '';
+            final handle = group['handle'] ?? '';
+            if (query.isEmpty ||
+                name.toLowerCase().contains(query) ||
+                handle.toLowerCase().contains(query)) {
+              items.add({
+                'id': groupId,
+                'name': name,
+                'handle': handle,
+                'type': 'group',
+              });
+            }
+          }
+        }
       }
     }
 
@@ -1630,7 +1639,7 @@ class MentionText extends ConsumerWidget {
     }
 
     final workspaceMembersAsync = ref.watch(workspaceMembersStreamProvider(workspaceId));
-    final userGroupsAsync = ref.watch(_workspaceUserGroupsProvider(workspaceId));
+    final userGroupsAsync = ref.watch(workspaceUserGroupsProvider(workspaceId));
 
     if (!workspaceMembersAsync.hasValue || !userGroupsAsync.hasValue) {
       return Text(content, style: style);
@@ -1638,6 +1647,12 @@ class MentionText extends ConsumerWidget {
 
     final members = workspaceMembersAsync.value ?? [];
     final groups = userGroupsAsync.value ?? [];
+
+    final activeChatSession = ref.watch(activeChatSessionProvider);
+    ChannelModel? activeChannel;
+    if (activeChatSession.type == ChatSessionType.channel && activeChatSession.chatId != null) {
+      activeChannel = ref.watch(activeChannelProvider(activeChatSession.chatId!)).value;
+    }
 
     final theme = Theme.of(context);
     final textStyle = style ?? theme.textTheme.bodyMedium;
@@ -1697,7 +1712,7 @@ class MentionText extends ConsumerWidget {
               },
           ),
         );
-      } else if (targetGroup != null) {
+      } else if (targetGroup != null && activeChannel != null && activeChannel.userGroups.contains(targetGroup['id'])) {
         spans.add(
           TextSpan(
             text: mentionText,
@@ -1707,8 +1722,8 @@ class MentionText extends ConsumerWidget {
             ),
             recognizer: TapGestureRecognizer()
               ..onTap = () {
-                ref.read(usersAndGroupsViewHistoryProvider.notifier).state = ['group:${targetGroup['id']}'];
-                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.usersAndGroups;
+                ref.read(userGroupTargetIdProvider.notifier).state = targetGroup['id'];
+                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.userGroupInfo;
               },
           ),
         );

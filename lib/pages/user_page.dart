@@ -11,13 +11,8 @@ import 'package:chat/providers/layout_provider.dart';
 import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
-// Repositories
-import 'package:chat/repositories/chat_repository.dart';
-
 // Widgets
-import 'package:chat/widgets/action_button.dart';
-import 'package:chat/widgets/details_row.dart';
-import 'package:chat/widgets/section_header.dart';
+import 'package:chat/widgets/chat/group_creation_modal.dart';
 
 // Enums & Values
 import 'package:chat/enums/layout_mode.dart';
@@ -60,7 +55,162 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
     _pageController.dispose();
     _userSearchController.dispose();
     _groupSearchController.dispose();
+    Future.microtask(() {
+      ref.read(usersAndGroupsViewHistoryProvider.notifier).state = const [];
+      ref.read(usersAndGroupsPageIndexProvider.notifier).state = 0;
+    });
     super.dispose();
+  }
+
+  Offset _tapPosition = Offset.zero;
+
+  void _storePosition(TapDownDetails details) {
+    _tapPosition = details.globalPosition;
+  }
+
+  void _showUserPopupMenu(
+    BuildContext context,
+    String userId,
+    String displayName,
+    bool isManager,
+    bool isThisUserCreator,
+    String currentUserId,
+    String workspaceId,
+  ) {
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromLTWH(_tapPosition.dx, _tapPosition.dy, 30, 30),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        const PopupMenuItem(
+          value: 'dm',
+          child: Row(
+            children: [
+              Icon(Icons.chat_bubble_outline, size: 18),
+              SizedBox(width: 8),
+              Text('Send DM'),
+            ],
+          ),
+        ),
+        if (isManager && userId != currentUserId && !isThisUserCreator) ...[
+          PopupMenuItem(
+            value: 'promote',
+            child: Row(
+              children: [
+                Icon(Icons.shield, size: 18),
+                const SizedBox(width: 8),
+                Text('Promote/Demote'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'remove',
+            child: Row(
+              children: [
+                Icon(Icons.person_remove, size: 18, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Remove User', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    ).then((action) {
+      if (action == 'dm') {
+        _dmUser(context, userId, displayName);
+      } else if (action == 'remove') {
+        _removeUser(context, workspaceId, userId, displayName);
+      } else if (action == 'promote') {
+        _promoteUser(context, workspaceId, userId, displayName);
+      }
+    });
+  }
+
+  void _showGroupPopupMenu(
+    BuildContext context,
+    String groupId,
+    String name,
+    Map<String, dynamic> groupData,
+    bool isManager,
+    bool isOtherGroupManager,
+    bool isPromoted,
+    List<String> workspaceMembers,
+    String workspaceId,
+  ) {
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromLTWH(_tapPosition.dx, _tapPosition.dy, 30, 30),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        const PopupMenuItem(
+          value: 'view',
+          child: Row(
+            children: [
+              Icon(Icons.visibility_outlined, size: 18),
+              SizedBox(width: 8),
+              Text('View Group Details'),
+            ],
+          ),
+        ),
+        if (isManager) ...[
+          const PopupMenuItem(
+            value: 'add_user',
+            child: Row(
+              children: [
+                Icon(Icons.person_add_alt_1_outlined, size: 18),
+                SizedBox(width: 8),
+                Text('Add Member'),
+              ],
+            ),
+          ),
+        ],
+        if (isManager || isOtherGroupManager) ...[
+          PopupMenuItem(
+            value: 'promote',
+            child: Row(
+              children: [
+                Icon(isPromoted ? Icons.shield_outlined : Icons.shield, size: 18),
+                const SizedBox(width: 8),
+                Text(isPromoted ? 'Demote Group' : 'Promote Group'),
+              ],
+            ),
+          ),
+        ],
+        if (isManager) ...[
+          const PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Delete Group', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    ).then((action) {
+      if (action == 'view') {
+        ref.read(userGroupTargetIdProvider.notifier).state = groupId;
+        ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.userGroupInfo;
+      } else if (action == 'add_user') {
+        _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
+      } else if (action == 'promote') {
+        _promoteGroup(context, workspaceId, groupData);
+      } else if (action == 'delete') {
+        _deleteGroup(context, workspaceId, groupId, name);
+      }
+    });
   }
 
   Color _getInitialsBgColor(String name) {
@@ -189,86 +339,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
   }
 
   Future<void> _createNewGroup(BuildContext context, String workspaceId) async {
-    final theme = Theme.of(context);
-    final nameController = TextEditingController();
-    final handleController = TextEditingController();
-    final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Create User Group'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Group Name',
-                  hintText: 'e.g. Engineering Team',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: handleController,
-                decoration: const InputDecoration(
-                  labelText: 'Group Handle',
-                  hintText: 'e.g. engineering',
-                  prefixText: '@',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final name = nameController.text.trim();
-                final handle = handleController.text.trim().replaceAll('@', '').toLowerCase();
-                if (name.isNotEmpty && handle.isNotEmpty) {
-                  try {
-                    final groupRef = FirebaseFirestore.instance
-                        .collection('workspaces')
-                        .doc(workspaceId)
-                        .collection('user_groups')
-                        .doc();
-
-                    await groupRef.set({
-                      'id': groupRef.id,
-                      'name': name,
-                      'handle': handle,
-                      'members': const [],
-                      'created_by': currentUserId,
-                      'created_at': FieldValue.serverTimestamp(),
-                      'is_promoted': false,
-                    });
-
-                    if (context.mounted) {
-                      Navigator.pop(dialogContext);
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to create group: $e'),
-                          backgroundColor: theme.colorScheme.error,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  }
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
-    );
+    showGroupCreationModal(context, workspaceId);
   }
 
   Future<void> _addUserToGroup(BuildContext context, String workspaceId, Map<String, dynamic> group, List<String> workspaceMembers) async {
@@ -628,11 +699,7 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
       _pageController = PageController(initialPage: _currentPage);
     }
 
-    final bodyContent = _viewHistory.isNotEmpty
-        ? (_viewHistory.last.startsWith('user:')
-            ? _buildUserProfileInspector(context, _viewHistory.last.substring(5), workspaceId, isManager)
-            : _buildUserGroupInspector(context, _viewHistory.last.substring(6), workspaceId, workspaceMembers, isManager))
-        : Scaffold(
+    final bodyContent = Scaffold(
       appBar: AppBar(
         leading: isMobile
             ? IconButton(
@@ -650,7 +717,16 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.transparent,
+        actions: [
+          if (!isMobile && ref.read(navIndexProvider) != 2)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+              },
+            ),
+        ],
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
         elevation: 0,
       ),
       body: SafeArea(
@@ -766,113 +842,77 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                                     ? displayName[0].toUpperCase()
                                                     : 'A';
 
-                                                return Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                                  child: ListTile(
-                                                    onTap: () {
-                                                      ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'user:$userId']);
-                                                    },
-                                                    hoverColor: theme.colorScheme.primary.withAlpha(20),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(12),
-                                                    ),
-                                                    leading: CircleAvatar(
-                                                      radius: 20,
-                                                      backgroundColor: photoUrl == null || photoUrl.isEmpty
-                                                          ? _getInitialsBgColor(displayName)
-                                                          : null,
-                                                      backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                                                          ? NetworkImage(photoUrl)
-                                                          : null,
-                                                      child: photoUrl == null || photoUrl.isEmpty
-                                                          ? Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
-                                                          : null,
-                                                    ),
-                                                    title: Row(
-                                                      children: [
-                                                        Flexible(
-                                                          child: Text(
-                                                            displayName,
-                                                            style: const TextStyle(fontWeight: FontWeight.bold),
-                                                            overflow: TextOverflow.ellipsis,
-                                                            maxLines: 1,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(width: 6),
-                                                        if (isThisUserCreator)
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                            decoration: BoxDecoration(
-                                                              color: theme.colorScheme.primaryContainer,
-                                                              borderRadius: BorderRadius.circular(4),
-                                                            ),
-                                                            child: Text('Admin', style: TextStyle(fontSize: 8, color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
-                                                          )
-                                                        else if (isThisUserManager)
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                            decoration: BoxDecoration(
-                                                              color: theme.colorScheme.secondaryContainer,
-                                                              borderRadius: BorderRadius.circular(4),
-                                                            ),
-                                                            child: Text('Manager', style: TextStyle(fontSize: 8, color: theme.colorScheme.secondary, fontWeight: FontWeight.bold)),
-                                                          )
-                                                      ],
-                                                    ),
-                                                    subtitle: Text(
-                                                      '@$handle',
-                                                      overflow: TextOverflow.ellipsis,
-                                                      maxLines: 1,
-                                                    ),
-                                                    trailing: PopupMenuButton<String>(
-                                                      icon: const Icon(Icons.more_vert),
-                                                      onSelected: (action) {
-                                                        if (action == 'dm') {
-                                                          _dmUser(context, userId, displayName);
-                                                        } else if (action == 'remove') {
-                                                          _removeUser(context, workspaceId, userId, displayName);
-                                                        } else if (action == 'promote') {
-                                                          _promoteUser(context, workspaceId, userId, displayName);
-                                                        }
-                                                      },
-                                                      itemBuilder: (context) => [
-                                                        const PopupMenuItem(
-                                                          value: 'dm',
-                                                          child: Row(
-                                                            children: [
-                                                              Icon(Icons.chat_bubble_outline, size: 18),
-                                                              SizedBox(width: 8),
-                                                              Text('Send DM'),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        if (isManager && userId != currentUserId && !isThisUserCreator) ...[
-                                                          const PopupMenuItem(
-                                                            value: 'promote',
-                                                            child: Row(
-                                                              children: [
-                                                                Icon(Icons.shield, size: 18),
-                                                                SizedBox(width: 8),
-                                                                Text('Promote to Manager'),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          const PopupMenuItem(
-                                                            value: 'remove',
-                                                            child: Row(
-                                                              children: [
-                                                                Icon(Icons.person_remove, size: 18, color: Colors.red),
-                                                                SizedBox(width: 8),
-                                                                Text('Remove User', style: TextStyle(color: Colors.red)),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              },
+                                                 return Padding(
+                                                   padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                                   child: GestureDetector(
+                                                     onTapDown: _storePosition,
+                                                     onLongPress: () {
+                                                       _showUserPopupMenu(context, userId, displayName, isManager, isThisUserCreator, currentUserId, workspaceId);
+                                                     },
+                                                     onSecondaryTap: () {
+                                                       _showUserPopupMenu(context, userId, displayName, isManager, isThisUserCreator, currentUserId, workspaceId);
+                                                     },
+                                                     child: ListTile(
+                                                       onTap: () {
+                                                         ref.read(profileTargetUserIdProvider.notifier).state = userId;
+                                                         ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
+                                                       },
+                                                       hoverColor: theme.colorScheme.primary.withAlpha(20),
+                                                       shape: RoundedRectangleBorder(
+                                                         borderRadius: BorderRadius.circular(12),
+                                                       ),
+                                                       leading: CircleAvatar(
+                                                         radius: 20,
+                                                         backgroundColor: photoUrl == null || photoUrl.isEmpty
+                                                             ? _getInitialsBgColor(displayName)
+                                                             : null,
+                                                         backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                                                             ? NetworkImage(photoUrl)
+                                                             : null,
+                                                         child: photoUrl == null || photoUrl.isEmpty
+                                                             ? Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                                                             : null,
+                                                       ),
+                                                       title: Row(
+                                                         children: [
+                                                           Flexible(
+                                                             child: Text(
+                                                               displayName,
+                                                               style: const TextStyle(fontWeight: FontWeight.bold),
+                                                               overflow: TextOverflow.ellipsis,
+                                                               maxLines: 1,
+                                                             ),
+                                                           ),
+                                                           const SizedBox(width: 6),
+                                                           if (isThisUserCreator)
+                                                             Container(
+                                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                               decoration: BoxDecoration(
+                                                                 color: theme.colorScheme.primaryContainer,
+                                                                 borderRadius: BorderRadius.circular(4),
+                                                               ),
+                                                               child: Text('Admin', style: TextStyle(fontSize: 8, color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                                                             )
+                                                           else if (isThisUserManager)
+                                                             Container(
+                                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                               decoration: BoxDecoration(
+                                                                 color: theme.colorScheme.secondaryContainer,
+                                                                 borderRadius: BorderRadius.circular(4),
+                                                               ),
+                                                               child: Text('Manager', style: TextStyle(fontSize: 8, color: theme.colorScheme.secondary, fontWeight: FontWeight.bold)),
+                                                             )
+                                                         ],
+                                                       ),
+                                                       subtitle: Text(
+                                                         '@$handle',
+                                                         overflow: TextOverflow.ellipsis,
+                                                         maxLines: 1,
+                                                       ),
+                                                     ),
+                                                   ),
+                                                 );
+                                               },
                                             ),
                                     ),
                                   ),
@@ -993,115 +1033,160 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
                                               : ListView.builder(
                                                   physics: const AlwaysScrollableScrollPhysics(),
                                                   itemCount: filteredGroups.length,
-                                                  itemBuilder: (context, index) {
-                                                    final groupDoc = filteredGroups[index];
-                                                    final groupData = groupDoc.data() as Map<String, dynamic>;
-                                                    final name = groupData['name'] ?? 'Unnamed Group';
-                                                    final handle = groupData['handle'] ?? 'group';
-                                                    final groupId = groupData['id'] ?? '';
-                                                    final isPromoted = groupData['is_promoted'] == true;
+                                                   itemBuilder: (context, index) {
+                                                     final groupDoc = filteredGroups[index];
+                                                     final groupData = groupDoc.data() as Map<String, dynamic>;
+                                                     final name = groupData['name'] ?? 'Unnamed Group';
+                                                     final handle = groupData['handle'] ?? 'group';
+                                                     final groupId = groupData['id'] ?? '';
+                                                     final isPromoted = groupData['is_promoted'] == true;
 
-                                                    return Padding(
-                                                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                                      child: ListTile(
-                                                        onTap: () {
-                                                          ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'group:$groupId']);
-                                                        },
-                                                        hoverColor: theme.colorScheme.primary.withAlpha(20),
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius: BorderRadius.circular(12),
-                                                        ),
-                                                        leading: CircleAvatar(
-                                                          radius: 20,
-                                                          backgroundColor: theme.colorScheme.primaryContainer,
-                                                          child: Icon(
-                                                            HugeIconsStroke.userGroup,
-                                                            color: theme.colorScheme.primary,
-                                                            size: 20,
-                                                          ),
-                                                        ),
-                                                        title: Row(
-                                                          children: [
-                                                            Flexible(
-                                                              child: Text(
-                                                                name,
-                                                                style: const TextStyle(fontWeight: FontWeight.bold),
-                                                                overflow: TextOverflow.ellipsis,
-                                                                maxLines: 1,
-                                                              ),
-                                                            ),
-                                                            if (isPromoted) ...[
-                                                              const SizedBox(width: 6),
-                                                              Icon(Icons.star, color: Colors.amber[600], size: 14),
-                                                            ],
-                                                          ],
-                                                        ),
-                                                        subtitle: Text(
-                                                          '@$handle',
-                                                          overflow: TextOverflow.ellipsis,
-                                                          maxLines: 1,
-                                                        ),
-                                                        trailing: PopupMenuButton<String>(
-                                                          icon: const Icon(Icons.more_vert),
-                                                          onSelected: (action) {
-                                                            if (action == 'view') {
-                                                              ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'group:$groupId']);
-                                                            } else if (action == 'add_user') {
-                                                              _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
-                                                            } else if (action == 'promote') {
-                                                              _promoteGroup(context, workspaceId, groupData);
-                                                            } else if (action == 'delete') {
-                                                              _deleteGroup(context, workspaceId, groupId, name);
-                                                            }
-                                                          },
-                                                          itemBuilder: (context) => [
-                                                            const PopupMenuItem(
-                                                              value: 'view',
-                                                              child: Row(
-                                                                children: [
-                                                                  Icon(Icons.visibility_outlined, size: 18),
-                                                                  SizedBox(width: 8),
-                                                                  Text('View Group Details'),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                            if (isManager) ...[
-                                                              const PopupMenuItem(
-                                                                value: 'add_user',
-                                                                child: Row(
-                                                                  children: [
-                                                                    Icon(Icons.person_add_alt_1_outlined, size: 18),
-                                                                    SizedBox(width: 8),
-                                                                    Text('Add Member'),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                              PopupMenuItem(
-                                                                value: 'promote',
-                                                                child: Row(
-                                                                  children: [
-                                                                    Icon(isPromoted ? Icons.star_border : Icons.star, size: 18),
-                                                                    const SizedBox(width: 8),
-                                                                    Text(isPromoted ? 'Demote Group' : 'Promote Group'),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                              const PopupMenuItem(
-                                                                value: 'delete',
-                                                                child: Row(
-                                                                  children: [
-                                                                    Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                                                                    SizedBox(width: 8),
-                                                                    Text('Delete Group', style: TextStyle(color: Colors.red)),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
+                                                     bool isOtherGroupManagerLocal = false;
+                                                     final currentUserId = ref.read(authStateProvider).value?.uid ?? '';
+                                                     for (final doc in groups) {
+                                                       if (doc.id == groupId) continue;
+                                                       final data = doc.data() as Map<String, dynamic>;
+                                                       if (data['is_promoted'] == true) {
+                                                         final membersList = List<String>.from(data['members'] ?? []);
+                                                         if (membersList.contains(currentUserId)) {
+                                                           isOtherGroupManagerLocal = true;
+                                                           break;
+                                                         }
+                                                       }
+                                                     }
+
+                                                     return Padding(
+                                                       padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                                       child: GestureDetector(
+                                                         onTapDown: _storePosition,
+                                                         onLongPress: () {
+                                                           _showGroupPopupMenu(context, groupId, name, groupData, isManager, isOtherGroupManagerLocal, isPromoted, workspaceMembers, workspaceId);
+                                                         },
+                                                         onSecondaryTap: () {
+                                                           _showGroupPopupMenu(context, groupId, name, groupData, isManager, isOtherGroupManagerLocal, isPromoted, workspaceMembers, workspaceId);
+                                                         },
+                                                         child: ListTile(
+                                                           onTap: () {
+                                                             ref.read(userGroupTargetIdProvider.notifier).state = groupId;
+                                                             ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.userGroupInfo;
+                                                           },
+                                                           hoverColor: theme.colorScheme.primary.withAlpha(20),
+                                                           shape: RoundedRectangleBorder(
+                                                             borderRadius: BorderRadius.circular(12),
+                                                           ),
+                                                           leading: CircleAvatar(
+                                                             radius: 20,
+                                                             backgroundColor: theme.colorScheme.primaryContainer,
+                                                             child: Icon(
+                                                               HugeIconsStroke.userGroup,
+                                                               color: theme.colorScheme.primary,
+                                                               size: 20,
+                                                             ),
+                                                           ),
+                                                           title: Row(
+                                                             children: [
+                                                               Flexible(
+                                                                 child: Text(
+                                                                   name,
+                                                                   style: const TextStyle(fontWeight: FontWeight.bold),
+                                                                   overflow: TextOverflow.ellipsis,
+                                                                   maxLines: 1,
+                                                                 ),
+                                                               ),
+                                                               if (isPromoted) ...[
+                                                                 const SizedBox(width: 6),
+                                                                 Container(
+                                                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                                   decoration: BoxDecoration(
+                                                                     color: theme.colorScheme.secondaryContainer,
+                                                                     borderRadius: BorderRadius.circular(4),
+                                                                   ),
+                                                                   child: Text(
+                                                                     'Manager',
+                                                                     style: TextStyle(
+                                                                       fontSize: 8,
+                                                                       color: theme.colorScheme.secondary,
+                                                                       fontWeight: FontWeight.bold,
+                                                                     ),
+                                                                   ),
+                                                                 ),
+                                                               ],
+                                                             ],
+                                                           ),
+                                                           subtitle: Text(
+                                                             '@$handle',
+                                                             overflow: TextOverflow.ellipsis,
+                                                             maxLines: 1,
+                                                           ),
+                                                           trailing: PopupMenuButton<String>(
+                                                             icon: const Icon(Icons.more_vert),
+                                                             onSelected: (action) {
+                                                               if (action == 'view') {
+                                                                 ref.read(userGroupTargetIdProvider.notifier).state = groupId;
+                                                                 ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.userGroupInfo;
+                                                               } else if (action == 'add_user') {
+                                                                 _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
+                                                               } else if (action == 'promote') {
+                                                                 _promoteGroup(context, workspaceId, groupData);
+                                                               } else if (action == 'delete') {
+                                                                 _deleteGroup(context, workspaceId, groupId, name);
+                                                               }
+                                                             },
+                                                             itemBuilder: (context) {
+                                                               return [
+                                                                 const PopupMenuItem(
+                                                                   value: 'view',
+                                                                   child: Row(
+                                                                     children: [
+                                                                       Icon(Icons.visibility_outlined, size: 18),
+                                                                       SizedBox(width: 8),
+                                                                       Text('View Group Details'),
+                                                                     ],
+                                                                   ),
+                                                                 ),
+                                                                 if (isManager) ...[
+                                                                   const PopupMenuItem(
+                                                                     value: 'add_user',
+                                                                     child: Row(
+                                                                       children: [
+                                                                         Icon(Icons.person_add_alt_1_outlined, size: 18),
+                                                                         SizedBox(width: 8),
+                                                                         Text('Add Member'),
+                                                                       ],
+                                                                     ),
+                                                                   ),
+                                                                 ],
+                                                                 if (isManager || isOtherGroupManagerLocal) ...[
+                                                                   PopupMenuItem(
+                                                                     value: 'promote',
+                                                                     child: Row(
+                                                                       children: [
+                                                                         Icon(isPromoted ? Icons.shield_outlined : Icons.shield, size: 18),
+                                                                         const SizedBox(width: 8),
+                                                                         Text(isPromoted ? 'Demote Group' : 'Promote Group'),
+                                                                       ],
+                                                                     ),
+                                                                   ),
+                                                                 ],
+                                                                 if (isManager) ...[
+                                                                   const PopupMenuItem(
+                                                                     value: 'delete',
+                                                                     child: Row(
+                                                                       children: [
+                                                                         Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                                                         SizedBox(width: 8),
+                                                                         Text('Delete Group', style: TextStyle(color: Colors.red)),
+                                                                       ],
+                                                                     ),
+                                                                   ),
+                                                                 ],
+                                                               ];
+                                                             },
+                                                           ),
+                                                         ),
+                                                       ),
+                                                     );
+                                                   },
                                                 ),
                                     ),
                                   ),
@@ -1127,523 +1212,6 @@ class UsersAndGroupsPageState extends ConsumerState<UsersAndGroupsPage> {
         ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
       },
       child: bodyContent,
-    );
-  }
-
-  Widget _buildUserProfileInspector(BuildContext context, String userId, String workspaceId, bool isManager) {
-    final theme = Theme.of(context);
-    final userAsync = ref.watch(userProfileByIdProvider(userId));
-
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () {
-            ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
-          },
-        ),
-        title: const Text(
-          'User Profile',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: userAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Error loading profile: $e')),
-          data: (user) {
-            if (user == null) {
-              return const Center(child: Text('User profile not found.'));
-            }
-            final displayName = user.displayName.isNotEmpty ? user.displayName : 'Aero User';
-            final photoUrl = user.photoUrl;
-            final handle = user.userName.isNotEmpty ? user.userName : 'user';
-            final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
-            final activeWorkspace = ref.watch(currentWorkspaceProvider);
-            final creatorId = activeWorkspace?['created_by'] ?? '';
-            final managers = List<String>.from(activeWorkspace?['managers'] ?? []);
-            final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
-            final isCreator = userId == creatorId;
-            final isThisUserManager = managers.contains(userId) || isCreator;
-            
-            String roleText = 'Member';
-            if (isCreator) {
-              roleText = 'Admin/Creator';
-            } else if (isThisUserManager) {
-              roleText = 'Manager';
-            }
-
-            return SingleChildScrollView(
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  padding: const EdgeInsets.only(
-                    top: 24.0,
-                    bottom: 90,
-                    left: 16.0,
-                    right: 16.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Profile Header Card
-                      Center(
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: photoUrl.isEmpty
-                                    ? LinearGradient(
-                                        colors: [
-                                          theme.colorScheme.primary,
-                                          theme.colorScheme.secondary,
-                                        ],
-                                      )
-                                    : null,
-                                image: photoUrl.isNotEmpty
-                                    ? DecorationImage(
-                                        image: NetworkImage(photoUrl),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: theme.colorScheme.primary.withAlpha(40),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: photoUrl.isNotEmpty
-                                  ? null
-                                  : Text(
-                                      initials,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              displayName,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '@$handle',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Quick Actions Row
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ActionButton(
-                              icon: Icons.chat_bubble_outline,
-                              label: 'Send DM',
-                              onTap: () {
-                                _dmUser(context, userId, displayName);
-                              },
-                            ),
-                          ),
-                          if (isManager && userId != currentUserId && !isCreator) ...[
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ActionButton(
-                                icon: isThisUserManager ? Icons.shield : Icons.shield_outlined,
-                                label: isThisUserManager ? 'Demote' : 'Promote',
-                                onTap: () {
-                                  _promoteUser(context, workspaceId, userId, displayName);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ActionButton(
-                                icon: Icons.person_remove,
-                                label: 'Remove',
-                                onTap: () {
-                                  _removeUser(context, workspaceId, userId, displayName);
-                                },
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Profile Details Card
-                      const SectionHeader(title: 'Profile Details', fontSize: 11.0),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant.withAlpha(80),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            DetailsRow(
-                              icon: Icons.email_outlined,
-                              label: 'Email ID',
-                              value: user.emailId,
-                            ),
-                            Divider(
-                              height: 24,
-                              color: theme.colorScheme.outlineVariant.withAlpha(80),
-                            ),
-                            DetailsRow(
-                              icon: Icons.shield,
-                              label: 'Workspace Role',
-                              value: roleText,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserGroupInspector(BuildContext context, String groupId, String workspaceId, List<String> workspaceMembers, bool isManager) {
-    final theme = Theme.of(context);
-    
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('workspaces')
-          .doc(workspaceId)
-          .collection('user_groups')
-          .doc(groupId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: Center(child: Text('Error: ${snapshot.error}')),
-          );
-        }
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        
-        final groupDoc = snapshot.data!;
-        if (!groupDoc.exists) {
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new),
-                onPressed: () {
-                  ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
-                },
-              ),
-            ),
-            body: const Center(child: Text('User Group not found.')),
-          );
-        }
-        
-        final groupData = groupDoc.data() as Map<String, dynamic>;
-        final name = groupData['name'] ?? 'Unnamed Group';
-        final handle = groupData['handle'] ?? 'group';
-        final isPromoted = groupData['is_promoted'] == true;
-        final members = List<String>.from(groupData['members'] ?? []);
-
-        return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new),
-              onPressed: () {
-                ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => state.isEmpty ? state : state.sublist(0, state.length - 1));
-              },
-            ),
-            title: const Text(
-              'User Group Details',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-          ),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  padding: const EdgeInsets.only(
-                    top: 24.0,
-                    bottom: 90,
-                    left: 16.0,
-                    right: 16.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Group Header Card
-                      Center(
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    theme.colorScheme.primaryContainer,
-                                    theme.colorScheme.secondaryContainer,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: theme.colorScheme.primary.withAlpha(40),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: Icon(
-                                HugeIconsStroke.userGroup,
-                                color: theme.colorScheme.primary,
-                                size: 36,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    name,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: theme.textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                                if (isPromoted) ...[
-                                  const SizedBox(width: 8),
-                                  Icon(Icons.star, color: Colors.amber[600], size: 20),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '@$handle',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Quick Actions Row
-                      if (isManager) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ActionButton(
-                                icon: Icons.person_add_alt_1_outlined,
-                                label: 'Add Member',
-                                onTap: () {
-                                  _addUserToGroup(context, workspaceId, groupData, workspaceMembers);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ActionButton(
-                                icon: isPromoted ? Icons.star_border : Icons.star,
-                                label: isPromoted ? 'Demote Group' : 'Promote Group',
-                                onTap: () {
-                                  _promoteGroup(context, workspaceId, groupData);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ActionButton(
-                                icon: Icons.delete_outline,
-                                label: 'Delete Group',
-                                onTap: () {
-                                  _deleteGroup(context, workspaceId, groupId, name);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Group Details Card
-                      const SectionHeader(title: 'Group Details', fontSize: 11.0),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant.withAlpha(80),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            DetailsRow(
-                              icon: Icons.people_outline,
-                              label: 'Total Members',
-                              value: '${members.length} members',
-                            ),
-                            Divider(
-                              height: 24,
-                              color: theme.colorScheme.outlineVariant.withAlpha(80),
-                            ),
-                            DetailsRow(
-                              icon: Icons.star_outline,
-                              label: 'Starred Status',
-                              value: isPromoted ? 'Starred (Promoted)' : 'Standard Group',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Group Members List at the bottom
-                      const SectionHeader(title: 'Group Members', fontSize: 11.0),
-                      const SizedBox(height: 8),
-                      if (members.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'No members in this group yet.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: theme.colorScheme.outlineVariant.withAlpha(80),
-                            ),
-                          ),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: members.length,
-                            itemBuilder: (context, index) {
-                              final memberId = members[index];
-                              final isLast = index == members.length - 1;
-                              
-                              return Consumer(
-                                builder: (context, ref, child) {
-                                  final profileAsync = ref.watch(userProfileByIdProvider(memberId));
-                                  return profileAsync.when(
-                                    loading: () => const ListTile(title: Text('Loading member...')),
-                                    error: (e, s) => ListTile(title: Text('Error: $e')),
-                                    data: (profile) {
-                                      if (profile == null) return const SizedBox.shrink();
-                                      final displayName = profile.displayName.isNotEmpty ? profile.displayName : 'Aero User';
-                                      final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
-                                      final photoUrl = profile.photoUrl;
-
-                                      return Column(
-                                        children: [
-                                          ListTile(
-                                            onTap: () {
-                                              ref.read(usersAndGroupsViewHistoryProvider.notifier).update((state) => [...state, 'user:$memberId']);
-                                            },
-                                            hoverColor: theme.colorScheme.primary.withAlpha(20),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            leading: CircleAvatar(
-                                              radius: 18,
-                                              backgroundColor: photoUrl.isEmpty
-                                                  ? _getInitialsBgColor(displayName)
-                                                  : null,
-                                              backgroundImage: photoUrl.isNotEmpty
-                                                  ? NetworkImage(photoUrl)
-                                                  : null,
-                                              child: photoUrl.isEmpty
-                                                  ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))
-                                                  : null,
-                                            ),
-                                            title: Text(
-                                              displayName,
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                            ),
-                                            subtitle: Text(
-                                              '@${profile.userName}',
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                              style: const TextStyle(fontSize: 12),
-                                            ),
-                                            trailing: const Icon(Icons.arrow_forward_ios, size: 12),
-                                          ),
-                                          if (!isLast)
-                                            Divider(
-                                              height: 1,
-                                              indent: 16,
-                                              color: theme.colorScheme.outlineVariant.withAlpha(80),
-                                            ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

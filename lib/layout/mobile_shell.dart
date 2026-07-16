@@ -23,6 +23,7 @@ import 'package:chat/pages/profile_page.dart';
 import 'package:chat/pages/dms_page.dart';
 import 'package:chat/pages/user_page.dart';
 import 'package:chat/widgets/chat/channel_info_modal.dart';
+import 'package:chat/widgets/chat/user_group_info_panel.dart';
 
 class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key});
@@ -72,15 +73,13 @@ class _MobileShellState extends ConsumerState<MobileShell> {
 
     final showNavPill = chatSession.type == ChatSessionType.none && activeSettingsPanel == SettingsPanelType.none;
     final canPop = chatSession.type == ChatSessionType.none &&
-        (selectedIndex != 2 || activeSettingsPanel == SettingsPanelType.none);
+        activeSettingsPanel == SettingsPanelType.none;
 
     return PopScope<Object?>(
       canPop: canPop,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (chatSession.type != ChatSessionType.none) {
-          ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
-        } else if (selectedIndex == 2 && activeSettingsPanel != SettingsPanelType.none) {
+        if (activeSettingsPanel != SettingsPanelType.none) {
           if (activeSettingsPanel == SettingsPanelType.usersAndGroups &&
               usersAndGroupsViewHistory.isNotEmpty) {
             ref.read(usersAndGroupsViewHistoryProvider.notifier).update(
@@ -89,6 +88,8 @@ class _MobileShellState extends ConsumerState<MobileShell> {
           } else {
             ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
           }
+        } else if (chatSession.type != ChatSessionType.none) {
+          ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
         }
       },
       child: Scaffold(
@@ -181,7 +182,7 @@ class _MobileShellState extends ConsumerState<MobileShell> {
               ),
   
             // Layer 2.8: Users and User Groups full-screen stack overlay
-            if (selectedIndex == 2 && activeSettingsPanel == SettingsPanelType.usersAndGroups)
+            if (activeSettingsPanel == SettingsPanelType.usersAndGroups)
               const Positioned.fill(
                 child: UsersAndGroupsPage(),
               ),
@@ -196,6 +197,12 @@ class _MobileShellState extends ConsumerState<MobileShell> {
             if (activeSettingsPanel == SettingsPanelType.channelInfo)
               const Positioned.fill(
                 child: ChannelInfoPanel(),
+              ),
+
+            // Layer 2.11: User Group Info full-screen stack overlay
+            if (activeSettingsPanel == SettingsPanelType.userGroupInfo)
+              const Positioned.fill(
+                child: UserGroupInfoPanel(),
               ),
   
             // Layer 3: Main Navigation Pill (Only visible when overlay slide layer is detached)

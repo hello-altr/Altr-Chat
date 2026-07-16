@@ -13,6 +13,7 @@ class ChannelModel {
   final String createdBy;
   final List<String> members;
   final List<String> managers;
+  final List<String> userGroups;
 
   const ChannelModel({
     required this.id,
@@ -27,6 +28,7 @@ class ChannelModel {
     required this.createdBy,
     required this.members,
     required this.managers,
+    required this.userGroups,
   });
 
   factory ChannelModel.fromFirestore(DocumentSnapshot doc) {
@@ -45,6 +47,7 @@ class ChannelModel {
       createdBy: data['created_by'] ?? '',
       members: (data['members'] as List?)?.map((e) => e.toString()).toList().cast<String>() ?? <String>[],
       managers: (data['managers'] as List?)?.map((e) => e.toString()).toList().cast<String>() ?? <String>[],
+      userGroups: (data['user_groups'] as List?)?.map((e) => e.toString()).toList().cast<String>() ?? <String>[],
     );
   }
 

@@ -10,6 +10,7 @@ import 'package:chat/providers/nav_provider.dart';
 
 // Widgets
 import 'package:chat/widgets/workspace_dropdown_switcher.dart';
+import 'package:chat/widgets/chat/user_group_info_panel.dart';
 import 'package:chat/widgets/chat/channel_info_modal.dart';
 import 'package:chat/widgets/floating_nav_pill.dart';
 import 'package:chat/widgets/empty_state.dart';
@@ -55,6 +56,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     final selectedIndex = ref.watch(navIndexProvider);
     final chatSession = ref.watch(activeChatSessionProvider);
     final activeSettingsPanel = ref.watch(activeSettingsPanelProvider);
+    final currentSettingsTab = ref.watch(currentSettingsTabProvider);
     final theme = Theme.of(context);
 
     // Listen to tab selection changes to animate the horizontal PageView directory
@@ -140,14 +142,13 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 ],
               ),
             ),
-      2 => switch (activeSettingsPanel) {
+      2 => switch (currentSettingsTab) {
           SettingsPanelType.profile => const ProfileCardInspector(),
           SettingsPanelType.appearance => const AppearanceSettingsPanel(),
           SettingsPanelType.workspaceInfo => const WorkspaceInfoPage(),
           SettingsPanelType.usersAndGroups => const UsersAndGroupsPage(),
           SettingsPanelType.notifications => const NotificationsPanelPage(),
-          SettingsPanelType.channelInfo => const SizedBox.shrink(),
-          SettingsPanelType.none => Center(
+          _ => Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420.0),
                 child: const EmptyStateWidget(
@@ -187,6 +188,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                                 ref.read(activeChatSessionProvider.notifier).state = const ActiveChatSession();
                               }
                               ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+                              ref.read(currentSettingsTabProvider.notifier).state = SettingsPanelType.none;
                             },
                             children: const [
                               DirectMessagesList(),
@@ -258,10 +260,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 child: Row(
                   children: [
                     Expanded(child: centralViewCanvas),
-                    if ((selectedIndex == 0 || selectedIndex == 1) &&
+                    if ((selectedIndex == 0 || selectedIndex == 1 || (selectedIndex == 2 && currentSettingsTab == SettingsPanelType.usersAndGroups)) &&
                         (activeSettingsPanel == SettingsPanelType.profile ||
                          activeSettingsPanel == SettingsPanelType.notifications ||
-                         activeSettingsPanel == SettingsPanelType.channelInfo)) ...[
+                         activeSettingsPanel == SettingsPanelType.channelInfo ||
+                         activeSettingsPanel == SettingsPanelType.userGroupInfo)) ...[
                       // 1px Divider
                       Container(
                         width: 1,
@@ -273,6 +276,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                           SettingsPanelType.profile => const ProfileCardInspector(),
                           SettingsPanelType.notifications => const NotificationsPanelPage(),
                           SettingsPanelType.channelInfo => const ChannelInfoPanel(),
+                          SettingsPanelType.userGroupInfo => const UserGroupInfoPanel(),
                           _ => const SizedBox.shrink(),
                         },
                       ),

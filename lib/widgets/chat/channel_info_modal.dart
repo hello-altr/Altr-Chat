@@ -20,6 +20,7 @@ import 'package:chat/repositories/chat_repository.dart';
 // Widgets
 import 'package:chat/widgets/action_button.dart';
 import 'package:chat/widgets/section_header.dart';
+import 'package:chat/widgets/chat/chat_feed_canvas.dart';
 
 // Enums
 import 'package:chat/enums/layout_mode.dart';
@@ -733,6 +734,8 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   final Set<String> _selectedUserIds = {};
+  final Set<String> _selectedGroupIds = {};
+  int _selectedTab = 0; // 0 for Users, 1 for User Groups
   bool _isSaving = false;
 
   @override
@@ -766,16 +769,53 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
     BuildContext context,
     ThemeData theme,
     AsyncValue<List<AltrUser>> membersAsync,
+    AsyncValue<List<Map<String, dynamic>>> userGroupsAsync,
     VoidCallback onClose,
   ) {
+    final users = membersAsync.value ?? [];
+    final groups = userGroupsAsync.value ?? [];
+
+    final selectedUsers = users.where((u) => _selectedUserIds.contains(u.userId)).toList();
+    final selectedGroups = groups.where((g) => _selectedGroupIds.contains(g['id'])).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Tab toggle segment
+        Row(
+          children: [
+            ChoiceChip(
+              label: const Text('Users'),
+              selected: _selectedTab == 0,
+              onSelected: (val) {
+                if (val) {
+                  setState(() {
+                    _selectedTab = 0;
+                  });
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Text('User Groups'),
+              selected: _selectedTab == 1,
+              onSelected: (val) {
+                if (val) {
+                  setState(() {
+                    _selectedTab = 1;
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
         // 1. Search Bar
         TextField(
           controller: _searchController,
           decoration: InputDecoration(
-            hintText: 'Search by name or @handle...',
+            hintText: _selectedTab == 0 ? 'Search by name or @handle...' : 'Search group by name or @handle...',
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
@@ -802,56 +842,79 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
         const SizedBox(height: 12),
 
         // 2. Horizontal Scrolling Selected Members Chips (Placeholder always stays)
-        membersAsync.when(
-          data: (users) {
-            if (_selectedUserIds.isEmpty) {
-              // Placeholder Chip to prevent layout jumping
-              return SizedBox(
-                height: 42,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHigh.withAlpha(120),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: theme.colorScheme.outlineVariant.withAlpha(100),
+        if (_selectedUserIds.isEmpty && _selectedGroupIds.isEmpty)
+          SizedBox(
+            height: 42,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHigh.withAlpha(120),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withAlpha(100),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.person_add_alt_1_outlined,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Select participants...',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.person_add_alt_1_outlined,
-                            size: 16,
-                            color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Select participants...',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              );
-            }
-
-            final selectedUsers = users.where((u) => _selectedUserIds.contains(u.userId)).toList();
-
-            return SizedBox(
-              height: 42,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: selectedUsers.length,
-                itemBuilder: (context, index) {
-                  final user = selectedUsers[index];
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            height: 42,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                ...selectedGroups.map((group) {
+                  final name = group['name'] ?? '';
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: InputChip(
+                      avatar: CircleAvatar(
+                        backgroundColor: theme.colorScheme.secondaryContainer,
+                        child: Icon(
+                          HugeIconsStroke.userGroup,
+                          color: theme.colorScheme.secondary,
+                          size: 14,
+                        ),
+                      ),
+                      label: Text(
+                        name,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onDeleted: () {
+                        setState(() {
+                          _selectedGroupIds.remove(group['id']);
+                        });
+                      },
+                      deleteIconColor: theme.colorScheme.error,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                    ),
+                  );
+                }),
+                ...selectedUsers.map((user) {
                   final displayName = user.displayName;
                   final photoUrl = user.photoUrl;
 
@@ -889,125 +952,208 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
                       backgroundColor: theme.colorScheme.surfaceContainerHigh,
                     ),
                   );
-                },
-              ),
-            );
-          },
-          loading: () => const SizedBox(height: 42),
-          error: (err, stack) => const SizedBox(height: 42),
-        ),
+                }),
+              ],
+            ),
+          ),
         const SizedBox(height: 8),
         const Divider(),
 
-        // 3. Scrollable List of Members
+        // 3. Scrollable List of Members or Groups
         Expanded(
-          child: membersAsync.when(
-            data: (users) {
-              final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
+          child: _selectedTab == 0
+              ? membersAsync.when(
+                  data: (users) {
+                    final currentUserId = ref.watch(authStateProvider).value?.uid ?? '';
 
-              // Filter by search query
-              final filteredUsers = users.where((u) {
-                if (_searchQuery.isEmpty) return true;
-                final nameMatch = u.displayName.toLowerCase().contains(_searchQuery);
-                final handleMatch = u.userName.toLowerCase().contains(_searchQuery);
-                return nameMatch || handleMatch;
-              }).toList();
+                    // Filter by search query
+                    final filteredUsers = users.where((u) {
+                      if (_searchQuery.isEmpty) return true;
+                      final nameMatch = u.displayName.toLowerCase().contains(_searchQuery);
+                      final handleMatch = u.userName.toLowerCase().contains(_searchQuery);
+                      return nameMatch || handleMatch;
+                    }).toList();
 
-              // Sort: Active (non-channel) users first, joined users / current user last
-              filteredUsers.sort((a, b) {
-                final aJoined = widget.channel.members.contains(a.userId) || a.userId == currentUserId;
-                final bJoined = widget.channel.members.contains(b.userId) || b.userId == currentUserId;
-                if (aJoined && !bJoined) return 1;
-                if (!aJoined && bJoined) return -1;
-                return a.displayName.compareTo(b.displayName);
-              });
+                    // Sort: Active (non-channel) users first, joined users / current user last
+                    filteredUsers.sort((a, b) {
+                      final aJoined = widget.channel.members.contains(a.userId) || a.userId == currentUserId;
+                      final bJoined = widget.channel.members.contains(b.userId) || b.userId == currentUserId;
+                      if (aJoined && !bJoined) return 1;
+                      if (!aJoined && bJoined) return -1;
+                      return a.displayName.compareTo(b.displayName);
+                    });
 
-              if (filteredUsers.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Text(
-                      'No workspace members match your selection.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
-              }
+                    if (filteredUsers.isEmpty) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Text(
+                            'No workspace members match your selection.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    }
 
-              return ListView.builder(
-                itemCount: filteredUsers.length,
-                itemBuilder: (context, index) {
-                  final user = filteredUsers[index];
-                  final isJoined = widget.channel.members.contains(user.userId) || user.userId == currentUserId;
-                  final isSelected = isJoined || _selectedUserIds.contains(user.userId);
-                  final displayName = user.displayName;
-                  final photoUrl = user.photoUrl;
+                    return ListView.builder(
+                      itemCount: filteredUsers.length,
+                      itemBuilder: (context, index) {
+                        final user = filteredUsers[index];
+                        final isJoined = widget.channel.members.contains(user.userId) || user.userId == currentUserId;
+                        final isSelected = isJoined || _selectedUserIds.contains(user.userId);
+                        final displayName = user.displayName;
+                        final photoUrl = user.photoUrl;
 
-                  if (isJoined) {
-                    final suffix = user.userId == currentUserId ? ' (You)' : ' (Joined)';
-                    return Opacity(
-                      opacity: 0.5,
-                      child: CheckboxListTile(
-                        value: true,
-                        onChanged: null,
-                        secondary: photoUrl.isNotEmpty
-                            ? CircleAvatar(
-                                backgroundImage: NetworkImage(photoUrl),
-                              )
-                            : CircleAvatar(
-                                backgroundColor: _getInitialsBgColor(displayName),
-                                child: Text(
-                                  _getInitials(displayName),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                        if (isJoined) {
+                          final suffix = user.userId == currentUserId ? ' (You)' : ' (Joined)';
+                          return Opacity(
+                            opacity: 0.5,
+                            child: CheckboxListTile(
+                              value: true,
+                              onChanged: null,
+                              secondary: photoUrl.isNotEmpty
+                                  ? CircleAvatar(
+                                      backgroundImage: NetworkImage(photoUrl),
+                                    )
+                                  : CircleAvatar(
+                                      backgroundColor: _getInitialsBgColor(displayName),
+                                      child: Text(
+                                        _getInitials(displayName),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                              title: Text(displayName),
+                              subtitle: Text('@${user.userName}$suffix'),
+                              controlAffinity: ListTileControlAffinity.trailing,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          );
+                        }
+
+                        return CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (bool? val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedUserIds.add(user.userId);
+                              } else {
+                                _selectedUserIds.remove(user.userId);
+                              }
+                            });
+                          },
+                          secondary: photoUrl.isNotEmpty
+                              ? CircleAvatar(
+                                  backgroundImage: NetworkImage(photoUrl),
+                                )
+                              : CircleAvatar(
+                                  backgroundColor: _getInitialsBgColor(displayName),
+                                  child: Text(
+                                    _getInitials(displayName),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
-                        title: Text(displayName),
-                        subtitle: Text('@${user.userName}$suffix'),
-                        controlAffinity: ListTileControlAffinity.trailing,
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                          title: Text(displayName),
+                          subtitle: Text('@${user.userName}'),
+                          controlAffinity: ListTileControlAffinity.trailing,
+                          contentPadding: EdgeInsets.zero,
+                        );
+                      },
                     );
-                  }
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error loading members: $err')),
+                )
+              : userGroupsAsync.when(
+                  data: (groups) {
+                    final filteredGroups = groups.where((g) {
+                      if (_searchQuery.isEmpty) return true;
+                      final nameMatch = (g['name'] ?? '').toString().toLowerCase().contains(_searchQuery);
+                      final handleMatch = (g['handle'] ?? '').toString().toLowerCase().contains(_searchQuery);
+                      return nameMatch || handleMatch;
+                    }).toList();
 
-                  return CheckboxListTile(
-                    value: isSelected,
-                    onChanged: (bool? val) {
-                      setState(() {
-                        if (val == true) {
-                          _selectedUserIds.add(user.userId);
-                        } else {
-                          _selectedUserIds.remove(user.userId);
-                        }
-                      });
-                    },
-                    secondary: photoUrl.isNotEmpty
-                        ? CircleAvatar(
-                            backgroundImage: NetworkImage(photoUrl),
-                          )
-                        : CircleAvatar(
-                            backgroundColor: _getInitialsBgColor(displayName),
-                            child: Text(
-                              _getInitials(displayName),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                    if (filteredGroups.isEmpty) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Text(
+                            'No workspace user groups match your selection.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: filteredGroups.length,
+                      itemBuilder: (context, index) {
+                        final group = filteredGroups[index];
+                        final groupId = group['id'] ?? '';
+                        final name = group['name'] ?? 'Unnamed Group';
+                        final handle = group['handle'] ?? 'group';
+                        final groupMembers = List<String>.from(group['members'] ?? []);
+                        
+                        final isJoined = widget.channel.userGroups.contains(groupId);
+                        final isSelected = isJoined || _selectedGroupIds.contains(groupId);
+
+                        if (isJoined) {
+                          return Opacity(
+                            opacity: 0.5,
+                            child: CheckboxListTile(
+                              value: true,
+                              onChanged: null,
+                              secondary: CircleAvatar(
+                                backgroundColor: theme.colorScheme.secondaryContainer,
+                                child: Icon(
+                                  HugeIconsStroke.userGroup,
+                                  color: theme.colorScheme.secondary,
+                                  size: 18,
+                                ),
                               ),
+                              title: Text(name),
+                              subtitle: Text('@$handle (Added) • ${groupMembers.length} members'),
+                              controlAffinity: ListTileControlAffinity.trailing,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          );
+                        }
+
+                        return CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (bool? val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedGroupIds.add(groupId);
+                              } else {
+                                _selectedGroupIds.remove(groupId);
+                              }
+                            });
+                          },
+                          secondary: CircleAvatar(
+                            backgroundColor: theme.colorScheme.secondaryContainer,
+                            child: Icon(
+                              HugeIconsStroke.userGroup,
+                              color: theme.colorScheme.secondary,
+                              size: 18,
                             ),
                           ),
-                    title: Text(displayName),
-                    subtitle: Text('@${user.userName}'),
-                    controlAffinity: ListTileControlAffinity.trailing,
-                    contentPadding: EdgeInsets.zero,
-                  );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text('Error loading members: $err')),
-          ),
+                          title: Text(name),
+                          subtitle: Text('@$handle • ${groupMembers.length} members'),
+                          controlAffinity: ListTileControlAffinity.trailing,
+                          contentPadding: EdgeInsets.zero,
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error loading user groups: $err')),
+                ),
         ),
         const Divider(),
 
@@ -1023,21 +1169,40 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: _isSaving || _selectedUserIds.isEmpty
+                onPressed: _isSaving || (_selectedUserIds.isEmpty && _selectedGroupIds.isEmpty)
                     ? null
                     : () async {
                         setState(() {
                           _isSaving = true;
                         });
                         try {
-                          await FirebaseFirestore.instance
+                          final allMemberIds = Set<String>.from(_selectedUserIds);
+                          for (final groupId in _selectedGroupIds) {
+                            final groupDoc = groups.firstWhere((g) => g['id'] == groupId);
+                            final groupMembers = List<String>.from(groupDoc['members'] ?? []);
+                            allMemberIds.addAll(groupMembers);
+                          }
+
+                          final batch = FirebaseFirestore.instance.batch();
+                          final channelRef = FirebaseFirestore.instance
                               .collection('chats')
                               .doc(widget.workspaceId)
                               .collection('channels')
-                              .doc(widget.channel.id)
-                              .update({
-                            'members': FieldValue.arrayUnion(_selectedUserIds.toList()),
-                          });
+                              .doc(widget.channel.id);
+
+                          final Map<String, dynamic> updates = {};
+                          if (allMemberIds.isNotEmpty) {
+                            updates['members'] = FieldValue.arrayUnion(allMemberIds.toList());
+                          }
+                          if (_selectedGroupIds.isNotEmpty) {
+                            updates['user_groups'] = FieldValue.arrayUnion(_selectedGroupIds.toList());
+                          }
+
+                          if (updates.isNotEmpty) {
+                            batch.update(channelRef, updates);
+                          }
+
+                          await batch.commit();
 
                           if (mounted) {
                             onClose();
@@ -1066,7 +1231,7 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text('Add Selected (${_selectedUserIds.length})'),
+                    : Text('Add Selected (${_selectedUserIds.length + _selectedGroupIds.length})'),
               ),
             ],
           ),
@@ -1080,6 +1245,7 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
     final theme = Theme.of(context);
     final isMobile = ref.watch(layoutProvider) == LayoutMode.mobile;
     final membersAsync = ref.watch(workspaceMembersStreamProvider(widget.workspaceId));
+    final userGroupsAsync = ref.watch(workspaceUserGroupsProvider(widget.workspaceId));
 
     if (isMobile) {
       return Scaffold(
@@ -1096,7 +1262,13 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: _buildContent(context, theme, membersAsync, () => Navigator.of(context).pop()),
+            child: _buildContent(
+              context,
+              theme,
+              membersAsync,
+              userGroupsAsync,
+              () => Navigator.of(context).pop(),
+            ),
           ),
         ),
       );
@@ -1122,7 +1294,13 @@ class _ResponsiveAddMemberRouteState extends ConsumerState<ResponsiveAddMemberRo
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _buildContent(context, theme, membersAsync, () => Navigator.of(context).pop()),
+              child: _buildContent(
+                context,
+                theme,
+                membersAsync,
+                userGroupsAsync,
+                () => Navigator.of(context).pop(),
+              ),
             ),
           ],
         ),
