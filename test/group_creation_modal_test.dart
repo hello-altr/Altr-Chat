@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hugeicons_pro/hugeicons.dart';
 import 'package:chat/widgets/chat/group_creation_modal.dart';
 import 'package:chat/providers/auth_provider.dart';
-import 'package:chat/repositories/chat_repository.dart';
 import 'package:chat/models/user_model.dart';
+import 'package:chat/widgets/chat/chat_feed_canvas.dart';
 
 void main() {
   testWidgets('GroupCreationModal Flow - Page 1 Name and Handle validations', (WidgetTester tester) async {
@@ -92,5 +91,71 @@ void main() {
 
     // Verify we transitioned to Page 2
     expect(find.text('Add Users'), findsOneWidget);
+  });
+
+  testWidgets('GroupCreationModal Flow - Handle Uniqueness validation shows error and disables continue', (WidgetTester tester) async {
+    final mockUser = AltrUser(
+      userId: 'test_uid',
+      userName: 'test_user',
+      displayName: 'Test User',
+      photoUrl: '',
+      emailId: 'test@example.com',
+      joinedWorkspaces: ['test_ws'],
+      activeWorkspaceId: 'test_ws',
+      onboardingCompleted: true,
+      profileOnboardingCompleted: true,
+      workspaceOnboardingCompleted: true,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider.overrideWith((ref) => mockUser),
+          workspaceUserGroupsProvider('test_ws').overrideWith((ref) => Stream.value([
+            {'id': 'g1', 'name': 'Dev Group', 'handle': 'devs', 'members': []}
+          ])),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: ElevatedButton(
+                  onPressed: () {
+                    showGroupCreationModal(context, 'test_ws');
+                  },
+                  child: const Text('Open Group Creation'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    // Tap to open group creation modal
+    await tester.tap(find.text('Open Group Creation'));
+    await tester.pumpAndSettle();
+
+    // Enter group name which creates handle 'devs' (which is already taken)
+    await tester.enterText(find.byType(TextFormField).first, 'devs');
+    await tester.pumpAndSettle();
+
+    // Verify inline error text is shown
+    expect(find.text('This group handle is already taken in this workspace.'), findsOneWidget);
+
+    // Verify continue button is disabled
+    final continueBtn = tester.widget<ElevatedButton>(find.byType(ElevatedButton).last);
+    expect(continueBtn.enabled, isFalse);
+
+    // Change group name to something unique
+    await tester.enterText(find.byType(TextFormField).first, 'Unique Team');
+    await tester.pumpAndSettle();
+
+    // Verify inline error text is gone
+    expect(find.text('This group handle is already taken in this workspace.'), findsNothing);
+
+    // Verify continue button is now enabled
+    final continueBtnUnique = tester.widget<ElevatedButton>(find.byType(ElevatedButton).last);
+    expect(continueBtnUnique.enabled, isTrue);
   });
 }

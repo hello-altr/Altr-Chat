@@ -21,6 +21,10 @@ import 'package:chat/models/user_model.dart';
 // Enums
 import 'package:chat/enums/layout_mode.dart';
 
+// Repositories & Database
+import 'package:chat/repositories/user_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ProfileCardInspector extends ConsumerStatefulWidget {
   const ProfileCardInspector({super.key});
 
@@ -30,6 +34,128 @@ class ProfileCardInspector extends ConsumerStatefulWidget {
 }
 
 class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
+  Future<void> _showEditProfileDialog(BuildContext context, AltrUser? user) async {
+    if (user == null) return;
+    final theme = Theme.of(context);
+    final formKey = GlobalKey<FormState>();
+    final displayNameController = TextEditingController(text: user.displayName);
+    final userNameController = TextEditingController(text: user.userName);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        bool isSaving = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Profile'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: displayNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Display Name',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (val) => val == null || val.trim().isEmpty ? 'Enter a display name' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: userNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username Handle',
+                        prefixIcon: Icon(Icons.alternate_email),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) return 'Enter a username';
+                        if (val.trim().contains(' ')) return 'Username cannot contain spaces';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setDialogState(() {
+                            isSaving = true;
+                          });
+
+                          try {
+                            final newHandle = userNameController.text.trim().toLowerCase();
+                            final displayName = displayNameController.text.trim();
+                            
+                            final userRepository = UserRepository();
+                            await userRepository.updateUsername(
+                              authenticatedUid: user.userId,
+                              oldHandle: user.userName,
+                              newHandle: newHandle,
+                            );
+
+                            await FirebaseFirestore.instance.collection('users').doc(user.userId).update({
+                              'display_name': displayName,
+                            });
+
+                            ref.invalidate(userProfileProvider);
+                            if (user.userId != FirebaseAuth.instance.currentUser?.uid) {
+                              ref.invalidate(userProfileByIdProvider(user.userId));
+                            }
+
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                          } on HandleAlreadyTakenException catch (_) {
+                            setDialogState(() {
+                              isSaving = false;
+                            });
+                            if (dialogContext.mounted) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(
+                                  content: const Text("Username is already taken. Please try another one."),
+                                  backgroundColor: theme.colorScheme.error,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              isSaving = false;
+                            });
+                            if (dialogContext.mounted) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(
+                                  content: Text("Failed to update profile: $e"),
+                                  backgroundColor: theme.colorScheme.error,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +323,9 @@ class _ProfileCardInspectorState extends ConsumerState<ProfileCardInspector> {
                             child: ActionButton(
                               icon: HugeIconsStroke.edit01,
                               label: 'Edit Info',
-                              onTap: () {},
+                              onTap: () {
+                                _showEditProfileDialog(context, profileUser);
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),

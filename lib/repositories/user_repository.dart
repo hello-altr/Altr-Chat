@@ -40,6 +40,36 @@ class UserRepository {
     });
   }
 
+  Future<void> updateUsername({
+    required String authenticatedUid,
+    required String oldHandle,
+    required String newHandle,
+  }) async {
+    final oldHandleRef = _firestore.collection('handles').doc(oldHandle.toLowerCase());
+    final newHandleRef = _firestore.collection('handles').doc(newHandle.toLowerCase());
+    final userProfileRef = _firestore.collection('users').doc(authenticatedUid);
+
+    await _firestore.runTransaction((transaction) async {
+      final newHandleDoc = await transaction.get(newHandleRef);
+      if (newHandleDoc.exists && newHandle.toLowerCase() != oldHandle.toLowerCase()) {
+        throw HandleAlreadyTakenException();
+      }
+
+      if (oldHandle.isNotEmpty && oldHandle.toLowerCase() != newHandle.toLowerCase()) {
+        transaction.delete(oldHandleRef);
+      }
+
+      transaction.set(newHandleRef, {
+        'user_id': authenticatedUid,
+        'assigned_at': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(userProfileRef, {
+        'user_name': newHandle,
+      });
+    });
+  }
+
   Future<void> syncGoogleUserToFirestore(User firebaseAuthUser) async {
     final deviceId = await DeviceService.getDeviceId();
     final userRef = _firestore.collection('users').doc(firebaseAuthUser.uid);

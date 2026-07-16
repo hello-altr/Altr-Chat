@@ -12,6 +12,9 @@ import 'package:chat/enums/layout_mode.dart';
 // Repositories
 import 'package:chat/repositories/chat_repository.dart';
 
+// Providers & Widgets
+import 'package:chat/widgets/chat/chat_feed_canvas.dart';
+
 void showGroupCreationModal(BuildContext context, String workspaceId) {
   showDialog(
     context: context,
@@ -208,6 +211,11 @@ class _GroupCreationModalState extends ConsumerState<GroupCreationModal> {
   }
 
   Widget _buildPage1(ThemeData theme) {
+    final userGroupsAsync = ref.watch(workspaceUserGroupsProvider(widget.workspaceId));
+    final userGroups = userGroupsAsync.value ?? [];
+    final enteredHandle = _handleController.text.trim().replaceAll('@', '').toLowerCase();
+    final handleExists = enteredHandle.isNotEmpty && userGroups.any((group) => (group['handle'] ?? '').toString().toLowerCase() == enteredHandle);
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -233,26 +241,6 @@ class _GroupCreationModalState extends ConsumerState<GroupCreationModal> {
             },
           ),
           const SizedBox(height: 20),
-          if (!_isCustomHandle) ...[
-            Text(
-              'Group Handle Preview',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _handleController.text.isEmpty
-                  ? '@group-handle'
-                  : '@${_handleController.text}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
           SwitchListTile(
             title: const Text('Customize Group Handle'),
             subtitle: const Text('Manually specify a custom @tag handle instead of the automatically generated one.'),
@@ -273,15 +261,46 @@ class _GroupCreationModalState extends ConsumerState<GroupCreationModal> {
             activeColor: theme.colorScheme.primary,
             contentPadding: EdgeInsets.zero,
           ),
+          if (!_isCustomHandle) ...[
+            const SizedBox(height: 20),
+            Text(
+              'Group Handle Preview',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _handleController.text.isEmpty
+                  ? '@group-handle'
+                  : '@${_handleController.text}',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: handleExists ? theme.colorScheme.error : theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (handleExists) ...[
+              const SizedBox(height: 4),
+              Text(
+                'This group handle is already taken in this workspace.',
+                style: TextStyle(
+                  color: theme.colorScheme.error,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
           if (_isCustomHandle) ...[
             const SizedBox(height: 20),
             TextFormField(
               controller: _handleController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Group Handle',
                 hintText: 'e.g. devs',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 prefixText: '@',
+                errorText: handleExists ? 'This group handle is already taken in this workspace.' : null,
               ),
               onChanged: (val) {
                 final formatted = val.replaceAll(' ', '-').toLowerCase();
@@ -303,7 +322,9 @@ class _GroupCreationModalState extends ConsumerState<GroupCreationModal> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _nameController.text.trim().isEmpty || (_isCustomHandle && _handleController.text.trim().isEmpty)
+              onPressed: _nameController.text.trim().isEmpty ||
+                         (_isCustomHandle && _handleController.text.trim().isEmpty) ||
+                         handleExists
                   ? null
                   : () {
                       setState(() {
