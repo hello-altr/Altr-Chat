@@ -25,7 +25,7 @@ import 'package:chat/pages/onboarding_page.dart';
 import 'package:chat/pages/welcome_page.dart';
 import 'package:chat/pages/splash_page.dart';
 
-// Theme & Utils 
+// Theme & Utils
 import 'package:chat/theme/app_theme.dart';
 
 // Models

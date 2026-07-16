@@ -16,6 +16,7 @@ import 'package:chat/providers/auth_provider.dart';
 import 'package:chat/providers/nav_provider.dart';
 
 // Repositories
+import 'package:chat/repositories/user_cache_repository.dart';
 import 'package:chat/repositories/chat_repository.dart';
 
 // Models
@@ -160,10 +161,6 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
     final authUser = ref.read(authStateProvider).value;
     if (authUser == null) return;
 
-    final userProfile = ref.read(userProfileProvider).value;
-    final senderName = userProfile?.displayName ?? authUser.displayName ?? 'Altr Member';
-    final senderPhotoUrl = userProfile?.photoUrl ?? authUser.photoURL ?? '';
-
     final workspaceId = ref.read(currentWorkspaceIdProvider);
     if (workspaceId == null) return;
 
@@ -180,20 +177,22 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
     _controller.clear();
 
     try {
+      String? quotedSenderName;
+      if (_quotedMessage != null) {
+        final senderUser = ref.read(userCacheRepositoryProvider)[_quotedMessage!.senderId];
+        quotedSenderName = senderUser?.displayName ?? 'Altr Member';
+      }
+
       await docRef.collection('messages').add({
-        'message': content,
-        'senderId': authUser.uid,
+        'sender_id': authUser.uid,
+        'content': content,
+        'timestamp': FieldValue.serverTimestamp(),
         'time': FieldValue.serverTimestamp(),
         'type': 'message',
         'quoted_reply_id': _quotedMessage?.id,
-        'sender_id': authUser.uid,
-        'sender_name': senderName,
-        'sender_photo_url': senderPhotoUrl,
-        'content': content,
-        'timestamp': FieldValue.serverTimestamp(),
         if (_quotedMessage != null) ...{
           'quoted_message_content': _quotedMessage!.content,
-          'quoted_message_sender_name': _quotedMessage!.senderName,
+          'quoted_message_sender_name': quotedSenderName,
         }
       });
 
@@ -226,6 +225,10 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
   }
 
   Widget _buildQuotePreview(ThemeData theme) {
+    if (_quotedMessage == null) return const SizedBox.shrink();
+    final quotedSenderAsync = ref.watch(userProfileByIdProvider(_quotedMessage!.senderId));
+    final quotedSenderName = quotedSenderAsync.value?.displayName ?? 'Altr Member';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -253,7 +256,7 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _quotedMessage!.senderName,
+                  quotedSenderName,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -304,7 +307,6 @@ class _ChatFeedCanvasState extends ConsumerState<ChatFeedCanvas> {
           .doc(messageId)
           .update({
         'content': newContent,
-        'message': newContent,
         'is_edited': true,
       });
     } catch (e) {
@@ -1227,8 +1229,8 @@ class _MessageRowState extends ConsumerState<MessageRow> {
 
     return userAsync.when(
       data: (user) {
-        final displayName = user?.displayName ?? widget.message.senderName;
-        final photoUrl = user?.photoUrl ?? widget.message.senderPhotoUrl;
+        final displayName = user?.displayName ?? 'Altr Member';
+        final photoUrl = user?.photoUrl ?? '';
 
         final bubbleMode = ref.watch(bubbleModeProvider);
 

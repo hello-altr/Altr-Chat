@@ -4,8 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class MessageModel {
   final String id;
   final String senderId;
-  final String senderName;
-  final String senderPhotoUrl;
   final String content;
   final DateTime? timestamp;
   final String? quotedMessageContent;
@@ -15,8 +13,6 @@ class MessageModel {
   const MessageModel({
     required this.id,
     required this.senderId,
-    required this.senderName,
-    required this.senderPhotoUrl,
     required this.content,
     this.timestamp,
     this.quotedMessageContent,
@@ -30,8 +26,6 @@ class MessageModel {
     return MessageModel(
       id: doc.id,
       senderId: data['sender_id'] ?? data['senderId'] ?? '',
-      senderName: data['sender_name'] ?? '',
-      senderPhotoUrl: data['sender_photo_url'] ?? '',
       content: data['content'] ?? data['message'] ?? '',
       timestamp: timestamp?.toDate(),
       quotedMessageContent: data['quoted_message_content'],
@@ -43,8 +37,6 @@ class MessageModel {
   Map<String, dynamic> toMap() {
     return {
       'sender_id': senderId,
-      'sender_name': senderName,
-      'sender_photo_url': senderPhotoUrl,
       'content': content,
       'timestamp': timestamp != null ? Timestamp.fromDate(timestamp!) : FieldValue.serverTimestamp(),
       'quoted_message_content': quotedMessageContent,

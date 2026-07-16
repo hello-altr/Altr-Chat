@@ -298,7 +298,19 @@ final workspaceNavigationStreamProvider = StreamProvider<WorkspaceNavigationStat
 final userProfileByIdProvider = FutureProvider.autoDispose.family<AltrUser?, String>((ref, userId) async {
   // Prevent duplicate baseline fetches during temporary workspace configuration adjustments
   ref.keepAliveFor(const Duration(minutes: 5));
-  ref.watch(userCacheRepositoryProvider);
+
+  // Check ChatRepository cache first (populated by workspaceMembersStreamProvider)
+  final chatRepo = ref.watch(chatRepositoryProvider);
+  if (chatRepo.hasCachedUser(userId)) {
+    return chatRepo.getCachedUser(userId);
+  }
+
+  // Watch only the changes of the specific user in the cache map to avoid unnecessary rebuilds/flickers
+  final cachedUser = ref.watch(userCacheRepositoryProvider.select((map) => map[userId]));
+  if (cachedUser != null) {
+    return cachedUser;
+  }
+
   return ref.watch(userCacheRepositoryProvider.notifier).getUser(userId);
 });
 
