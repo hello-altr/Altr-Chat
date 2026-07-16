@@ -128,181 +128,247 @@ class _WorkspaceSidebarState extends ConsumerState<WorkspaceSidebar> {
               ),
               const SizedBox(height: 16),
               
-              // Load the real-time streams
+              // Load the real-time streams 
               Expanded(
                 child: widget.initialSection == SidebarSection.channels
-                    ? navigationAsync.when(
-                        data: (navData) {
-                          final query = searchQuery.toLowerCase();
-                          final filteredChannels = navData.channels.where((ch) {
-                            return ch.name.toLowerCase().contains(query) ||
-                                ch.lastMessage.toLowerCase().contains(query);
-                          }).toList();
-
-                          if (filteredChannels.isEmpty) {
-                            return _buildEmptyState(
-                              isSearch: searchQuery.isNotEmpty,
-                              searchQuery: searchQuery,
-                              searchQueryProvider: searchQueryProvider,
-                            );
-                          }
-
-                          return ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 90),
-                            itemCount: filteredChannels.length,
-                            itemBuilder: (context, index) {
-                              final channel = filteredChannels[index];
-                              final isSelected = chatSession.chatId == channel.id &&
-                                  chatSession.type == ChatSessionType.channel;
-                              return SidebarItemTile(
-                                id: channel.id,
-                                title: '#${channel.name}',
-                                subtitle: channel.lastMessage,
-                                time: channel.time,
-                                lastMessageTime: channel.lastMessageTime,
-                                isSelected: isSelected,
-                                icon: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isSelected && isDesktop
-                                        ? theme.colorScheme.primary.withAlpha(40)
-                                        : theme.colorScheme.surfaceContainerHigh,
-                                  ),
-                                  child: Icon(
-                                    channel.isPrivate
-                                        ? HugeIconsStroke.lock
-                                        : HugeIconsStroke.hashtag,
-                                    color: isSelected && isDesktop
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.onSurfaceVariant,
-                                    size: 20,
-                                  ),
-                                ),
-                                onTap: () {
-                                  ref.read(navIndexProvider.notifier).state = 1;
-                                  ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
-                                    chatId: channel.id,
-                                    type: ChatSessionType.channel,
-                                  );
-                                  ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
-                                },
-                              );
-                            },
-                          );
+                    ? RefreshIndicator(
+                        onRefresh: () async {
+                          ref.invalidate(workspaceNavigationStreamProvider);
+                          try {
+                            await ref.read(workspaceNavigationStreamProvider.future);
+                          } catch (_) {}
                         },
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(32.0),
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                        error: (err, stack) => Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              "Error loading chats list: $err",
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
-                          ),
-                        ),
-                      )
-                    : ref.watch(workspaceDmsStreamProvider(workspaceId)).when(
-                        data: (dms) {
-                          final query = searchQuery.toLowerCase();
-                          final filteredDms = dms.map((dm) {
-                            final counterpartId = dm.participants.firstWhere(
-                              (id) => id != currentUserId,
-                              orElse: () => currentUserId,
-                            );
-                            final profileAsync = ref.watch(userProfileByIdProvider(counterpartId));
-                            final name = profileAsync.value?.displayName ?? 'Loading...';
-                            return dm.copyWith(userName: name);
-                          }).where((dm) {
-                            return dm.userName.toLowerCase().contains(query) ||
-                                dm.lastMessage.toLowerCase().contains(query);
-                          }).toList();
+                        child: navigationAsync.when(
+                          data: (navData) {
+                            final query = searchQuery.toLowerCase();
+                            final filteredChannels = navData.channels.where((ch) {
+                              return ch.name.toLowerCase().contains(query) ||
+                                  ch.lastMessage.toLowerCase().contains(query);
+                            }).toList();
 
-                          // Active Timeline Sort Order (Step A)
-                          filteredDms.sort((a, b) {
-                            final timeA = a.lastMessageTime;
-                            final timeB = b.lastMessageTime;
-                            if (timeA == null && timeB == null) return 0;
-                            if (timeA == null) return 1;
-                            if (timeB == null) return -1;
-                            return timeB.compareTo(timeA);
-                          });
-
-                          if (filteredDms.isEmpty) {
-                            return _buildEmptyState(
-                              isSearch: searchQuery.isNotEmpty,
-                              searchQuery: searchQuery,
-                              searchQueryProvider: searchQueryProvider,
-                            );
-                          }
-
-                          return ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 90),
-                            itemCount: filteredDms.length,
-                            itemBuilder: (context, index) {
-                              final dm = filteredDms[index];
-                              final isSelected = chatSession.chatId == dm.id &&
-                                  chatSession.type == ChatSessionType.dm;
-                              return SidebarItemTile(
-                                id: dm.id,
-                                title: dm.userName.isEmpty ? 'Loading...' : dm.userName,
-                                subtitle: dm.lastMessagePreview,
-                                time: dm.time,
-                                lastMessageTime: dm.lastMessageTime,
-                                isSelected: isSelected,
-                                icon: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isSelected && isDesktop
-                                        ? theme.colorScheme.primary.withAlpha(40)
-                                        : _getInitialsBgColor(dm.userName.isEmpty ? 'Loading...' : dm.userName),
+                            if (filteredChannels.isEmpty) {
+                              return ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height * 0.6,
+                                    child: _buildEmptyState(
+                                      isSearch: searchQuery.isNotEmpty,
+                                      searchQuery: searchQuery,
+                                      searchQueryProvider: searchQueryProvider,
+                                    ),
                                   ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    (dm.userName.isEmpty ? 'L' : dm.userName)
-                                        .substring(0, (dm.userName.length > 1 ? 2 : 1))
-                                        .toUpperCase(),
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
+                                ],
+                              );
+                            }
+
+                            return ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.only(bottom: 90),
+                              itemCount: filteredChannels.length,
+                              itemBuilder: (context, index) {
+                                final channel = filteredChannels[index];
+                                final isSelected = chatSession.chatId == channel.id &&
+                                    chatSession.type == ChatSessionType.channel;
+                                return SidebarItemTile(
+                                  id: channel.id,
+                                  title: '#${channel.name}',
+                                  subtitle: channel.lastMessage,
+                                  time: channel.time,
+                                  lastMessageTime: channel.lastMessageTime,
+                                  isSelected: isSelected,
+                                  icon: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isSelected && isDesktop
+                                          ? theme.colorScheme.primary.withAlpha(40)
+                                          : theme.colorScheme.surfaceContainerHigh,
+                                    ),
+                                    child: Icon(
+                                      channel.isPrivate
+                                          ? HugeIconsStroke.lock
+                                          : HugeIconsStroke.hashtag,
                                       color: isSelected && isDesktop
                                           ? theme.colorScheme.primary
-                                          : Colors.white,
+                                          : theme.colorScheme.onSurfaceVariant,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    ref.read(navIndexProvider.notifier).state = 1;
+                                    ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
+                                      chatId: channel.id,
+                                      type: ChatSessionType.channel,
+                                    );
+                                    ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          loading: () => ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.6,
+                                child: const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(32.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          error: (err, stack) => ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.6,
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      "Error loading chats list: $err",
+                                      style: TextStyle(color: theme.colorScheme.error),
                                     ),
                                   ),
                                 ),
-                                onTap: () {
-                                  ref.read(navIndexProvider.notifier).state = 0;
-                                  ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
-                                      chatId: dm.id,
-                                      type: ChatSessionType.dm,
-                                  );
-                                  ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
-                                },
-                              );
-                            },
-                          );
-                        },
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(32.0),
-                            child: CircularProgressIndicator(),
+                              ),
+                            ],
                           ),
                         ),
-                        error: (err, stack) => Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              "Error loading chats list: $err",
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          ref.invalidate(workspaceDmsStreamProvider(workspaceId));
+                          try {
+                            await ref.read(workspaceDmsStreamProvider(workspaceId).future);
+                          } catch (_) {}
+                        },
+                        child: ref.watch(workspaceDmsStreamProvider(workspaceId)).when(
+                          data: (dms) {
+                            final query = searchQuery.toLowerCase();
+                            final filteredDms = dms.map((dm) {
+                              final counterpartId = dm.participants.firstWhere(
+                                (id) => id != currentUserId,
+                                orElse: () => currentUserId,
+                              );
+                              final profileAsync = ref.watch(userProfileByIdProvider(counterpartId));
+                              final name = profileAsync.value?.displayName ?? 'Loading...';
+                              return dm.copyWith(userName: name);
+                            }).where((dm) {
+                              return dm.userName.toLowerCase().contains(query) ||
+                                  dm.lastMessage.toLowerCase().contains(query);
+                            }).toList();
+
+                            // Active Timeline Sort Order (Step A)
+                            filteredDms.sort((a, b) {
+                              final timeA = a.lastMessageTime;
+                              final timeB = b.lastMessageTime;
+                              if (timeA == null && timeB == null) return 0;
+                              if (timeA == null) return 1;
+                              if (timeB == null) return -1;
+                              return timeB.compareTo(timeA);
+                            });
+
+                            if (filteredDms.isEmpty) {
+                              return ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height * 0.6,
+                                    child: _buildEmptyState(
+                                      isSearch: searchQuery.isNotEmpty,
+                                      searchQuery: searchQuery,
+                                      searchQueryProvider: searchQueryProvider,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+
+                            return ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.only(bottom: 90),
+                              itemCount: filteredDms.length,
+                              itemBuilder: (context, index) {
+                                final dm = filteredDms[index];
+                                final isSelected = chatSession.chatId == dm.id &&
+                                    chatSession.type == ChatSessionType.dm;
+                                return SidebarItemTile(
+                                  id: dm.id,
+                                  title: dm.userName.isEmpty ? 'Loading...' : dm.userName,
+                                  subtitle: dm.lastMessagePreview,
+                                  time: dm.time,
+                                  lastMessageTime: dm.lastMessageTime,
+                                  isSelected: isSelected,
+                                  icon: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isSelected && isDesktop
+                                          ? theme.colorScheme.primary.withAlpha(40)
+                                          : _getInitialsBgColor(dm.userName.isEmpty ? 'Loading...' : dm.userName),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (dm.userName.isEmpty ? 'L' : dm.userName)
+                                          .substring(0, (dm.userName.length > 1 ? 2 : 1))
+                                          .toUpperCase(),
+                                      style: theme.textTheme.labelMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected && isDesktop
+                                            ? theme.colorScheme.primary
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    ref.read(navIndexProvider.notifier).state = 0;
+                                    ref.read(activeChatSessionProvider.notifier).state = ActiveChatSession(
+                                        chatId: dm.id,
+                                        type: ChatSessionType.dm,
+                                    );
+                                    ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.none;
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          loading: () => ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.6,
+                                child: const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(32.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          error: (err, stack) => ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.6,
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      "Error loading chats list: $err",
+                                      style: TextStyle(color: theme.colorScheme.error),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
