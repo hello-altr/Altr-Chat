@@ -1392,9 +1392,9 @@ class _MessageRowState extends ConsumerState<MessageRow> {
                 constraints: BoxConstraints(
                   maxWidth: (MediaQuery.of(context).size.width * 0.7).clamp(0.0, 600.0),
                 ),
-                decoration: BoxDecoration(
+                 decoration: BoxDecoration(
                   color: isCurrentUser
-                      ? theme.colorScheme.primary.withAlpha(40)
+                      ? theme.colorScheme.primary.withAlpha(20)
                       : theme.colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(12),
@@ -1412,7 +1412,7 @@ class _MessageRowState extends ConsumerState<MessageRow> {
                   ),
                   border: Border.all(
                     color: isCurrentUser
-                        ? theme.colorScheme.primary.withAlpha(60)
+                        ? theme.colorScheme.primary.withAlpha(35)
                         : theme.colorScheme.outlineVariant.withAlpha(80),
                   ),
                 ),
@@ -1698,33 +1698,59 @@ class MentionText extends ConsumerWidget {
       final targetGroup = group;
 
       if (targetUser != null) {
+        final displayName = targetUser.displayName.isNotEmpty ? targetUser.displayName : targetUser.userName;
         spans.add(
-          TextSpan(
-            text: mentionText,
-            style: textStyle?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: GestureDetector(
+              onTap: () {
                 ref.read(profileTargetUserIdProvider.notifier).state = targetUser.userId;
                 ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.profile;
               },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withAlpha(35),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  displayName,
+                  style: textStyle?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       } else if (targetGroup != null && activeChannel != null && activeChannel.userGroups.contains(targetGroup['id'])) {
+        final groupName = targetGroup['name']?.toString() ?? mentionText;
         spans.add(
-          TextSpan(
-            text: mentionText,
-            style: textStyle?.copyWith(
-              color: theme.colorScheme.secondary,
-              fontWeight: FontWeight.bold,
-            ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: GestureDetector(
+              onTap: () {
                 ref.read(userGroupTargetIdProvider.notifier).state = targetGroup['id'];
                 ref.read(activeSettingsPanelProvider.notifier).state = SettingsPanelType.userGroupInfo;
               },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withAlpha(35),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  groupName,
+                  style: textStyle?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       } else {
