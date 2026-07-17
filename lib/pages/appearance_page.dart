@@ -26,31 +26,61 @@ class AppearanceSettingsPanel extends ConsumerWidget {
     final selectedColor = appearance.accentSeedColor;
 
     Widget themeSelectionRow = Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
       children: [
-        ThemeModeOption(
-          mode: ThemeMode.system,
-          label: 'Auto',
-          isSelected: currentThemeMode == ThemeMode.system,
-          selectedColor: selectedColor,
-          isMobile: isMobile,
-        ),
+        isMobile
+            ? Expanded(
+                child: ThemeModeOption(
+                  mode: ThemeMode.system,
+                  label: 'Auto',
+                  isSelected: currentThemeMode == ThemeMode.system,
+                  selectedColor: selectedColor,
+                  isMobile: isMobile,
+                ),
+              )
+            : ThemeModeOption(
+                mode: ThemeMode.system,
+                label: 'Auto',
+                isSelected: currentThemeMode == ThemeMode.system,
+                selectedColor: selectedColor,
+                isMobile: isMobile,
+              ),
         const SizedBox(width: 16),
-        ThemeModeOption(
-          mode: ThemeMode.light,
-          label: 'Light',
-          isSelected: currentThemeMode == ThemeMode.light,
-          selectedColor: selectedColor,
-          isMobile: isMobile,
-        ),
+        isMobile
+            ? Expanded(
+                child: ThemeModeOption(
+                  mode: ThemeMode.light,
+                  label: 'Light',
+                  isSelected: currentThemeMode == ThemeMode.light,
+                  selectedColor: selectedColor,
+                  isMobile: isMobile,
+                ),
+              )
+            : ThemeModeOption(
+                mode: ThemeMode.light,
+                label: 'Light',
+                isSelected: currentThemeMode == ThemeMode.light,
+                selectedColor: selectedColor,
+                isMobile: isMobile,
+              ),
         const SizedBox(width: 16),
-        ThemeModeOption(
-          mode: ThemeMode.dark,
-          label: 'Dark',
-          isSelected: currentThemeMode == ThemeMode.dark,
-          selectedColor: selectedColor,
-          isMobile: isMobile,
-        ),
+        isMobile
+            ? Expanded(
+                child: ThemeModeOption(
+                  mode: ThemeMode.dark,
+                  label: 'Dark',
+                  isSelected: currentThemeMode == ThemeMode.dark,
+                  selectedColor: selectedColor,
+                  isMobile: isMobile,
+                ),
+              )
+            : ThemeModeOption(
+                mode: ThemeMode.dark,
+                label: 'Dark',
+                isSelected: currentThemeMode == ThemeMode.dark,
+                selectedColor: selectedColor,
+                isMobile: isMobile,
+              ),
       ],
     );
 
@@ -59,7 +89,7 @@ class AppearanceSettingsPanel extends ConsumerWidget {
       appearanceContent = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: themeSelectionRow),
+          themeSelectionRow,
         ],
       );
     } else {
@@ -84,42 +114,49 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           color: const Color(0xff096b5a),
           label: "Default",
           isSelected: selectedColor == const Color(0xff096b5a),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFF007AFF),
           label: "",
           isSelected: selectedColor == const Color(0xFF007AFF),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFF8E44AD),
           label: "",
           isSelected: selectedColor == const Color(0xFF8E44AD),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFFFF3B30),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF3B30),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFFFF9500),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF9500),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFFFFCC00),
           label: "",
           isSelected: selectedColor == const Color(0xFFFFCC00),
+          isMobile: false,
         ),
         const SizedBox(width: 10),
         ThemeColorOptionItem(
           color: const Color(0xFF34C759),
           label: "",
           isSelected: selectedColor == const Color(0xFF34C759),
+          isMobile: false,
         ),
       ],
     );
@@ -132,36 +169,43 @@ class AppearanceSettingsPanel extends ConsumerWidget {
           color: const Color(0xff096b5a),
           label: "Default",
           isSelected: selectedColor == const Color(0xff096b5a),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFF007AFF),
           label: "",
           isSelected: selectedColor == const Color(0xFF007AFF),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFF8E44AD),
           label: "",
           isSelected: selectedColor == const Color(0xFF8E44AD),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFFFF3B30),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF3B30),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFFFF9500),
           label: "",
           isSelected: selectedColor == const Color(0xFFFF9500),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFFFFCC00),
           label: "",
           isSelected: selectedColor == const Color(0xFFFFCC00),
+          isMobile: true,
         ),
         ThemeColorOptionItem(
           color: const Color(0xFF34C759),
           label: "",
           isSelected: selectedColor == const Color(0xFF34C759),
+          isMobile: true,
         ),
       ],
     );
@@ -195,6 +239,43 @@ class AppearanceSettingsPanel extends ConsumerWidget {
         ],
       );
     }
+
+    final bubbleMode = ref.watch(bubbleModeProvider);
+
+    Widget bubbleModeToggleContent = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Bubble Mode',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Convert chats into message bubbles, like in WhatsApp',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Switch(
+          value: bubbleMode,
+          onChanged: (newValue) async {
+            await ref.read(bubbleModeProvider.notifier).setBubbleMode(newValue);
+          },
+          activeColor: theme.colorScheme.primary,
+        ),
+      ],
+    );
 
     Widget content = Center(
       child: Container(
@@ -246,6 +327,11 @@ class AppearanceSettingsPanel extends ConsumerWidget {
                     color: theme.colorScheme.outlineVariant.withAlpha(80),
                   ),
                   themeContent,
+                  Divider(
+                    height: 32,
+                    color: theme.colorScheme.outlineVariant.withAlpha(80),
+                  ),
+                  bubbleModeToggleContent,
                 ],
               ),
             ),

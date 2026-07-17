@@ -119,10 +119,20 @@ class _WorkspaceFlowCanvasState extends ConsumerState<WorkspaceFlowCanvas> {
         'members': FieldValue.arrayUnion([user.uid]),
       });
 
+      final deviceRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('devices')
+          .doc(deviceId);
+      batch.set(deviceRef, {
+        'device_id': deviceId,
+        'active_workspace_id': token,
+        'last_active': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
       final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       batch.update(userRef, {
-        'current_workspaces.$deviceId': token,
-        'active_workspaces': FieldValue.arrayUnion([token]),
+        'joined_workspaces': FieldValue.arrayUnion([token]),
         'workspace_onboarding_completed': true,
       });
 
@@ -170,10 +180,6 @@ class _WorkspaceFlowCanvasState extends ConsumerState<WorkspaceFlowCanvas> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Workspace Options',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
         leading: showBack
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),

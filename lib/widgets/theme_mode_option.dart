@@ -34,6 +34,9 @@ class ThemeModeOption extends ConsumerWidget {
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: isMobile
+            ? CrossAxisAlignment.stretch
+            : CrossAxisAlignment.center,
         children: [
           ThemePreview(
             mode: mode,

@@ -21,43 +21,45 @@ class UniversalSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(28), // Pill shape border radius
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withAlpha(80),
-        ),
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(28),
+      borderSide: BorderSide(
+        color: theme.colorScheme.outlineVariant.withAlpha(80),
       ),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-          ),
-          prefixIcon: Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Icon(
-              HugeIconsStroke.search01,
-              color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-              size: 20,
-            ),
-          ),
-          suffixIcon: searchQuery.isNotEmpty
-              ? Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: onClear,
-                  ),
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+    );
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      style: theme.textTheme.bodyMedium,
+      textAlignVertical: TextAlignVertical.center,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
         ),
-        style: theme.textTheme.bodyMedium,
+        prefixIcon: Icon(
+          HugeIconsStroke.search01,
+          color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+          size: 20,
+        ),
+        suffixIcon: searchQuery.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: onClear,
+              )
+            : null,
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHigh,
+        border: border,
+        enabledBorder: border,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 1.5,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
       ),
     );
   }

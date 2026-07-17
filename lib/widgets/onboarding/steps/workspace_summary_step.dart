@@ -70,18 +70,36 @@ class _WorkspaceSummaryStepState extends ConsumerState<WorkspaceSummaryStep> {
       });
 
       for (final channelName in widget.channels) {
-        final channelRef = FirebaseFirestore.instance.collection('chat').doc();
+        final channelRef = FirebaseFirestore.instance
+            .collection('chats')
+            .doc(workspaceId)
+            .collection('channels')
+            .doc();
         batch.set(channelRef, {
-          'workspace_id': workspaceId,
           'name': channelName.replaceAll('#', ''),
+          'is_private': false,
+          'is_archived': false,
+          'members': [user.uid],
           'created_at': FieldValue.serverTimestamp(),
+          'last_message': 'Workspace channel created.',
+          'last_message_time': FieldValue.serverTimestamp(),
         });
       }
 
+      final deviceRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('devices')
+          .doc(deviceId);
+      batch.set(deviceRef, {
+        'device_id': deviceId,
+        'active_workspace_id': workspaceId,
+        'last_active': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
       final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       batch.update(userRef, {
-        'current_workspaces.$deviceId': workspaceId,
-        'active_workspaces': FieldValue.arrayUnion([workspaceId]),
+        'joined_workspaces': FieldValue.arrayUnion([workspaceId]),
         'workspace_onboarding_completed': true,
       });
 

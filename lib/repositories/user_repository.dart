@@ -40,23 +40,65 @@ class UserRepository {
     });
   }
 
+  Future<void> updateUsername({
+    required String authenticatedUid,
+    required String oldHandle,
+    required String newHandle,
+  }) async {
+    final oldHandleRef = _firestore.collection('handles').doc(oldHandle.toLowerCase());
+    final newHandleRef = _firestore.collection('handles').doc(newHandle.toLowerCase());
+    final userProfileRef = _firestore.collection('users').doc(authenticatedUid);
+
+    await _firestore.runTransaction((transaction) async {
+      final newHandleDoc = await transaction.get(newHandleRef);
+      if (newHandleDoc.exists && newHandle.toLowerCase() != oldHandle.toLowerCase()) {
+        throw HandleAlreadyTakenException();
+      }
+
+      if (oldHandle.isNotEmpty && oldHandle.toLowerCase() != newHandle.toLowerCase()) {
+        transaction.delete(oldHandleRef);
+      }
+
+      transaction.set(newHandleRef, {
+        'user_id': authenticatedUid,
+        'assigned_at': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(userProfileRef, {
+        'user_name': newHandle,
+      });
+    });
+  }
+
   Future<void> syncGoogleUserToFirestore(User firebaseAuthUser) async {
     final deviceId = await DeviceService.getDeviceId();
     final userRef = _firestore.collection('users').doc(firebaseAuthUser.uid);
+    final deviceRef = userRef.collection('devices').doc(deviceId);
 
     await _firestore.runTransaction((transaction) async {
       final docSnapshot = await transaction.get(userRef);
+      final deviceSnapshot = await transaction.get(deviceRef);
 
       if (docSnapshot.exists) {
         // Case A (Document Already Exists): Execute atomic field update only on the device matrix block
         // to preserve prior user profile configuration overrides.
         final data = docSnapshot.data();
-        final currentWorkspaces = data?['current_workspaces'] as Map?;
-        final existingValue = currentWorkspaces?[deviceId] ?? '';
+        final joinedWorkspaces = List<String>.from(data?['joined_workspaces'] ?? []);
+        
+        String activeWorkspaceId = '';
+        if (deviceSnapshot.exists) {
+          activeWorkspaceId = deviceSnapshot.data()?['active_workspace_id'] as String? ?? '';
+        }
 
-        transaction.update(userRef, {
-          'current_workspaces.$deviceId': existingValue,
-        });
+        if (activeWorkspaceId.isEmpty && joinedWorkspaces.isNotEmpty) {
+          activeWorkspaceId = joinedWorkspaces.first;
+        }
+
+        transaction.set(deviceRef, {
+          'device_id': deviceId,
+          'active_workspace_id': activeWorkspaceId,
+          'last_active': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       } else {
         // Case B (First Time Sign-In Detected): Initialize a brand new document record
         final String email = firebaseAuthUser.email ?? '';
@@ -73,11 +115,16 @@ class UserRepository {
           'display_name': firebaseAuthUser.displayName ?? 'Altr Member',
           'photo_url': firebaseAuthUser.photoURL ?? '',
           'email_id': email,
-          'active_workspaces': <String>[],
-          'current_workspaces': {deviceId: ""},
+          'joined_workspaces': <String>[],
           'onboarding_completed': false,
           'profile_onboarding_completed': false,
           'workspace_onboarding_completed': false,
+        });
+
+        transaction.set(deviceRef, {
+          'device_id': deviceId,
+          'active_workspace_id': '',
+          'last_active': FieldValue.serverTimestamp(),
         });
       }
     });

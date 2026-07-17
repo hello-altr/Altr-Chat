@@ -39,14 +39,17 @@ class _WorkspaceOnboardingPageState extends State<WorkspaceOnboardingPage> {
           );
         } else {
           // Desktop Structural Presentation Shell
+          final isAppStart = widget.contextType == WorkspaceFlowContext.appStart;
           return Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            backgroundColor: isAppStart
+                ? Theme.of(context).colorScheme.surface
+                : Colors.transparent,
             body: Stack(
               children: [
                 // Translucent backdrop scrim layer mask blocking background interactions
                 ModalBarrier(
                   // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.45),
+                  color: isAppStart ? Colors.transparent : Colors.black.withOpacity(0.45),
                   dismissible: false,
                 ),
                 Center(

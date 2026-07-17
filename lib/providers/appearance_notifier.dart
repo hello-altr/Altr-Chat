@@ -79,3 +79,24 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
 }
 
 final appearanceProvider = NotifierProvider<AppearanceNotifier, AppearanceState>(AppearanceNotifier.new);
+
+class BubbleModeNotifier extends Notifier<bool> {
+  static const String _bubbleModeKey = "altr_bubble_mode";
+
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_bubbleModeKey) ?? false;
+  }
+
+  Future<void> setBubbleMode(bool value) async {
+    state = value;
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      await prefs.setBool(_bubbleModeKey, value);
+    } catch (_) {}
+  }
+}
+
+final bubbleModeProvider = NotifierProvider<BubbleModeNotifier, bool>(BubbleModeNotifier.new);
+

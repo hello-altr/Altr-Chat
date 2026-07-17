@@ -21,9 +21,7 @@ class ThemePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: isMobile ? 120 : 120,
-      height: isMobile ? 220 : 72,
+    final Widget previewContent = Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
@@ -63,6 +61,19 @@ class ThemePreview extends StatelessWidget {
                 isMobile: isMobile,
               ),
       ),
+    );
+
+    if (isMobile) {
+      return AspectRatio(
+        aspectRatio: 9 / 16,
+        child: previewContent,
+      );
+    }
+
+    return SizedBox(
+      width: 120,
+      height: 72,
+      child: previewContent,
     );
   }
 }
